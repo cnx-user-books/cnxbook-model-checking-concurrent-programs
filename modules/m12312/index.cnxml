@@ -1,0 +1,508 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml">
+  <title>Concurrent Processes: Basic Issues</title>
+  <metadata><md:content-id>undefined</md:content-id><md:title/><md:uuid>d5669d86-59b6-4fe6-a427-b14227e98f77</md:uuid>
+</metadata>
+  
+  <content>
+
+    <section id="section1">
+      <title>Basic Concepts</title>
+
+      <para id="para1">
+        <term>Concurrency</term> is
+	the execution of two or more independent, interacting programs
+        over the same period of time;
+        their execution can be interleaved or even simultaneous.
+	Concurrency is used in many kinds of systems, both small and large.
+      </para>
+
+      <example id="example1">
+	<para id="para2">
+	  The typical home computer is full of examples.  In separate windows,
+	  a user runs a web browser, a text editor, and a music player
+	  all at once.
+          The operating system interacts with each of them.
+	</para>
+
+	<para id="para3">
+	  Almost unnoticed, the clock and virus scanner are also running.
+	  The operating system waits for the user to ask more programs to
+	  start, while also handling underlying tasks such as resolving
+	  what information from the Internet goes to which program.
+	</para>
+      </example>
+ 
+      <example id="airline_reservation">
+	<para id="para4">
+	  Using a web-based airline reservation system,
+	  Joe and Sue each want to buy a ticket.
+	  Each has a separate computer, and thus a separate web browser.
+	  Their two web browsers plus the airline's web server together
+	  comprise the concurrent program.
+        </para>
+
+        <para id="para5">
+	  As this example illustrates, the term <term>concurrent system</term>
+          might be more	appropriate.
+          However, for verification purposes, we will
+          view them as a single, distributed entity to be modeled.
+	</para>
+      </example>
+   
+      <para id="para6">
+	A concurrent system may be implemented via
+	<term>process</term>es and/or <term>thread</term>s.
+	Although details can vary upon platform, the fundamental
+	difference is that processes have separate address spaces, whereas
+	threads share address spaces.
+	We will follow the common theoretical practice and ignore this
+	distinction, using shared variables when desired, and using the two
+	terms interchangeably.
+      </para>
+    
+      <para id="para7">
+	We view these threads as executing relatively independently.
+	However, since they are acting together towards some goal,
+	they must need to communicate and coordinate.
+	The two most common communication techniques in processes and threads
+	are through, respectively, <term>message passing</term>
+        and <term>shared variables</term>.
+	In order to communicate at the right times,
+        they must <term>synchronize</term>,
+	together arriving at agreed-upon control points.  Often, one or more
+	threads <term>block</term>, or stop and wait for some external event.
+	In this module, we will use only shared variables, 
+        although the tools we use also allow message passing.
+      </para>
+     
+      <para id="para8">
+	Even though we have multiple flows of control, that doesn't imply
+	we need multiple processors.  Concurrent programs may be 
+	executed on a single processor by interleaving their control flows.
+	In order to understand what happens in a concurrent program over time,
+	we must understand how the individual operations of the threads
+	can interleave.  This is independent of how many processesors
+	we use,
+	although it is convenient to think of only having one processor.
+	To consider the possible interleavings, we need to know which actions
+	are <term>atomic</term>, or indivisible.
+        If an atomic operation begins,
+	we know that it won't be interrupted by a context switch
+        until it is done.
+	We generally assume that each hardware machine instruction is atomic,
+	but a programming language might guarantee that even more complicated
+	operations are atomic as well.
+      </para>
+
+      <definition id="definition1">
+        <term>State</term>
+        <meaning id="idp10163360">
+          A state captures all the current information in a program.
+          This includes all local and global variables' values and
+          each thread's current program counter.
+          More generally, this includes all the memory and register contents.
+        </meaning>
+
+        <seealso>
+          <term>trace</term>
+          <term>state-space</term>
+        </seealso>
+      </definition>
+
+      <definition id="definition2">
+	<term>Trace</term>
+	<meaning id="idp9108704">
+	  A trace is the sequence of operations (and their data)
+	  performed in a particular run of a concurrent program.
+	  Equivalently, it is the sequence of states during a run 
+          — <foreign>i.e.</foreign>, the collection of variable
+          and program counter values.
+	</meaning>
+
+        <seealso>
+          <term>state</term>
+          <term><m:math><m:ci>ω</m:ci></m:math>-trace</term>
+        </seealso>
+      </definition>
+
+      <definition id="def-atomic">
+	<term>Atomic</term>
+	<meaning id="idp679440">
+	  An atomic operation is indivisible.  A context switch to another
+	  process cannot happen during this operation.
+	</meaning>
+
+	<example id="example3">
+	  <title>Statement-level Atomicity</title>
+	  
+	  <para id="para9">
+	    Let's examine the possible interleavings of the code
+	    fragments for two threads.
+	    First, let's assume that each assignment statement is atomic.
+	  </para>
+
+	  <code display="block" id="idp228784">
+1  thread0:
+2  {
+3    x=x+1
+4  }
+
+5  thread1:
+6  {
+7    x=x*2
+8  }
+	  </code>
+
+	  <figure id="figure1">
+	    <subfigure id="subfigure1">
+	      <media id="idp448304" alt=""><image src="../../media/c_atom_trace1.png" mime-type="image/png"/></media>
+	    </subfigure>
+
+	    <subfigure id="subfigure2">
+	      <media id="idp883248" alt=""><image src="../../media/c_atom_trace2.png" mime-type="image/png"/></media>
+	    </subfigure>
+
+	    <caption>
+              There are two possible traces, as either thread's
+              statement could execute first.
+              Bold type highlights anything modified or assigned to
+              each step.
+            </caption>
+	  </figure>
+
+	  <para id="para10">
+	    Here, each trace is a timeline, representing
+	    one possible interleaving of operations.
+            From top to bottom, each state represents one point in time,
+            with a current line number for each thread, plus the value
+            of each variable.
+            The first state is the starting point, before execution begins.
+            Here, we assume that <code display="inline">x</code>
+            is initially zero.
+	    We will use traces and their timeline diagrams throughout this
+	    module to understand concurrent programs.
+	  </para>
+	</example>
+
+	<example id="example4">
+	  <title>Instruction-level Atomicity</title>
+	  
+	  <para id="para11">
+	    For contrast, let's change what is atomic.  Now, assume that each
+	    machine instruction operation, such as loading, adding, or storing
+	    a register, is atomic.
+            Again, we assume <code display="inline">x</code> is initially zero.
+            Observe that with finer-grained atomicity,
+	    there are many more ways to interleave the threads,
+            and (in this case) more possible result values for
+            <code display="inline">x</code>.
+	  </para>
+
+	  <code display="block" id="idp7407424">
+ 1  thread0:
+ 2  {
+ 3    r0 =  x
+ 4    r0 += 1
+ 5    x  =  r0
+ 6  }
+
+ 7  thread1:
+ 8  {
+ 9    r1 =   x
+10    r1 &lt;&lt;= 1  /* Shifting left one position multiplies by 2. */
+11    x  =   r1
+12  }
+	  </code>
+
+	  <figure id="figure2" orient="vertical">
+	    <subfigure id="subfigure3">
+	      <media id="idp9422960" alt=""><image src="../../media/asm_atom_traces1.png" mime-type="image/png"/></media>
+	    </subfigure>
+
+	    <subfigure id="subfigure4">
+	      <media id="idp8105600" alt=""><image src="../../media/asm_atom_traces2.png" mime-type="image/png"/></media>
+	    </subfigure>
+
+	    <caption>
+              With finer-grained atomicity,
+	      there are many more ways to interleave the threads.
+            </caption>
+	  </figure>
+	</example>
+      </definition>
+
+      <para id="para12">
+	Both the syntax and semantics of the concurrency primitives can vary
+	among programming languages and concurrency libraries.
+        We will use a particular language,
+        <link url="http://spinroot.com/spin/Man/index.html">Promela</link>,
+	which implements the most commonly-used features of
+        concurrent programs.
+        In Promela,
+        assignment statements are defined to be atomic.
+        We'll later contrast
+        <link document="m12316" target-id="tiny-first">atomic</link>
+        with
+        <link document="m12316" target-id="race-balance">non-atomic</link>
+        assignment statements.
+      </para>
+
+    </section>
+
+
+    <section id="section2">
+      <title>Problems with Concurrency</title>
+
+      <para id="para13">
+	Programmers are comfortable with debugging single-threaded code, where
+        most questions involve ``does 
+        this sequence of instructions
+        compute the correct answer?''
+	Concurrency, however, introduces the added complications of
+	communication and synchronization;
+        a single task may be spread across several sequences
+        of instructions running asynchronously,
+        and multiple threads can interact in unintended ways.
+	The following are five common categories of problems with concurrency.
+      </para>
+
+      <definition id="definition4">
+	<term>Deadlock</term>
+	<meaning id="idp9452544"> (Informal)
+	  Deadlock is when two or more threads stop and wait for each other.
+	</meaning>
+      </definition>
+
+      <definition id="definition5">
+	<term>Livelock</term>
+	<meaning id="idp7833808">(Informal)
+	  Livelock is when two or more threads continue to execute,
+          but make no progress toward the ultimate goal.
+	</meaning>
+      </definition>
+
+      <example id="deadlock_livelock">
+	<title>Deadlock vs. Livelock</title>
+
+	<para id="para14">
+	  As an analogy, consider two people walking
+	  in a hallway towards each other.  The hallway is wide enough for two
+	  people to pass.  Of interest is what happens when the two
+	  people meet.
+	  If on the same side of the hallway,
+	  a polite strategy is to step to the other side.
+	  A more belligerent strategy is to wait for the other person to move.
+	  Two belligerent people will suffer in deadlock, glaring
+          face to face in front of each other.
+	  Two polite people could suffer from livelock
+	  if they repeatedly side-step simultaneously.
+          (No conclusions on morality are to be inferred from 
+           the fact that one polite and one belligerent person
+	  don't have any problems.)
+	</para>
+
+        <figure id="figure3">
+          <media id="idp8095568" alt=""><image src="../../media/deadlock.png" mime-type="image/png"/></media>
+          <caption>Two belligerent hallway-walkers can deadlock.</caption>
+        </figure>
+      </example>
+
+      <definition id="definition6">
+	<term>Fairness</term>
+	<meaning id="idp304832">
+	  (Informal)
+          Fairness is the idea that each thread gets a turn to make progress.
+	</meaning>
+      </definition>
+
+      <para id="para15">
+	There are more specific notions of fairness that describe when and
+	how often threads are guaranteed to get a turn.
+	For example, do we expect that each thread should be executed as often
+	as any other, or is it acceptable if one runs a hundred steps
+	for each step of any other thread?
+	When considering fairness, one must also consider the system code
+	implementing the threads.  The implementation includes a scheduler
+	that determines how to interleave the threads, and the scheduler
+	might or might not provide any fairness guarantees.
+      </para>
+
+      <definition id="definition7">
+	<term>Starvation</term>
+	<meaning id="idp165376">
+	  (Informal) Starvation is when some thread gets deferred forever.
+	</meaning>
+      </definition>
+
+      <example id="example6">
+	<title>Fairness and Starvation</title>
+
+	<para id="para16">
+	  Assume we are modeling a store.  Consumers buy products,
+	  reducing the shelf inventory.  Meanwhile, employees restock
+	  the shelves, increasing the shelf inventory.
+	  More simply, let thread <m:math><m:ci>C</m:ci></m:math>
+          be a loop that repeatedly decrements
+	  a counter, and thread <m:math><m:ci>P</m:ci></m:math>
+          be a loop that repeatedly increments that same counter.
+	</para>
+
+	<para id="para17">
+	  Unless our scheduler (which may be nature) 
+          otherwise gives some guarantees,
+	  this system does not
+	  ensure that the two threads execute fairly.
+          In particular, it is possible for one thread to starve the other.
+	</para>
+      </example>
+
+      <example id="example7">
+        <title>The express checkout line, and the woes of Grover</title>
+        <para id="para18">
+          A
+          <link url="http://www.sesameworkshop.org/sesamestreet/">Sesame Street</link>
+          skit has Grover in line at the grocery store,
+          his basket heaped full of animal crackers and other essentials.
+          A little old lady gets in line behind him, holding only a single
+          candle, muttering how she
+          is late for her grandson's very first birthday party.
+          Grover muses that she has to wait a long time for his big basket
+          to be rung up, whereas if she went first it's hardly any delay
+          at all for him.  
+          So he invites her to get in front of him in line, and she gratefully
+          accepts.
+        </para>
+        <para id="para19">
+          You might guess what happens next though:
+          Next in line is the Swedish Chef,
+          needing only a single meatball (Bork! Bork! Bork!), and then
+          <link url="http://www.gusworld.com.au/games/mrm/lewzealand.jpg">fish-flinging Lew Zealand</link>,
+          who is buying just one little herring, 
+          followed by … [insert Grover's resigned sigh here].
+        </para>
+        <para id="para20">
+          The scheduler, in this case, is
+          the social protocol at the checkout line 
+          (which includes Grover's politeness). 
+          This input situation demonstrates how Grover gets starved.
+          The alternate protocol of having an additional express checkout line
+          (without allowing any butt-ins) is an attempt to minimize 
+          customers' wait-delay without introducing starvation.
+        </para>
+      </example>
+
+
+      <definition id="definition8">
+	<term>Race Condition</term>
+	<meaning id="idp708992">
+	  A race condition is when some possible interleaving of threads
+	  results in an undesired computation result.
+	</meaning>
+
+	<example id="example8">
+	  <para id="para21">
+	    Returning to our
+	    <link target-id="airline_reservation">airline reservation system example</link>,
+	    suppose Joe and Sue each see that one seat
+	    is left.  It is a race condition error if the system allows
+	    both of them to successfully reserve the one seat.
+	  </para>
+	</example>
+      </definition>
+
+      <para id="para22">
+	Typically, a race condition is an oversight by the programmer
+	who did not realize the interleaving was possible.
+	Race conditions are notoriously hard to debug and test for
+	because they can well occur in highly unlikely situations.
+      </para>
+
+      <para id="para23">
+	More generally, these and other issues are categorized as being either
+	<term>safety</term> or <term>liveness</term> issues. 
+
+        <list id="list1" list-type="bulleted">
+          <item>
+            Safety properties are those that
+	    say ``bad things never happen''.
+            Examples are the lack of deadlock, the lack of livelock,
+	    and the lack of race conditions.
+	    For a particular program, a safety property might be that
+	    inventory levels never become negative, or that customers can't
+	    cut ahead in line.
+	  </item>
+	  <item>
+	    Liveness properties are those that say
+	    ``good things eventually happen''.
+	    An example is fairness.
+	    For a particular program, a liveness property might be that
+	    each customer is served, or that after each program error,
+	    an error message is printed.
+            Typically, liveness issues can't be detected by looking
+	    at a program at a particular moment, but instead require
+	    considering an entire (infinite) trace.
+	  </item>
+	</list>
+      </para>
+
+      <para id="para24">
+	In this module, we will concentrate on the four issues of
+	deadlock, livelock, race conditions, and fairness.
+        We will see how to 
+        <link document="m12316">write and automatedly detect these problems</link>
+        in some concurrent programs, using the tools
+        <link url="http://spinroot.com/spin/Man/index.html">Promela
+        and SPIN</link>.
+	We will also learn how to formally specify more intricate properties
+        using <link document="m12317">temporal logic</link>.
+      </para>
+    </section>
+
+
+    <section id="section3">
+      <title>Avoiding and Detecting Problems with Concurrency</title>
+
+      <para id="para25">
+	There are known programming techniques to avoid certain problems
+	such as deadlock and some kinds of race conditions.
+	Some of these techniques — notably locks and semaphores —
+        are so
+	common that they are often embedded into programming languages.
+	While the details of such techniques are outside the
+        scope of this module,
+	it is important to recognize that although they greatly help writing
+        concurrent problems, they don't mean that concurrency problems
+        can't arise.
+      </para>
+
+      <para id="para26">
+	Given concurrent code, how can we determine if it behaves as expected?
+	Certainly we can test it on various inputs, but we can never try
+	every possible input.  Neither can we test every possible interleaving
+	on every possible input.  As always, testing can reveal errors, but it
+	can't demonstrate the lack of errors.
+      </para>
+
+      <para id="para27">
+	Since concurrency problems can lead to programs that don't terminate, 
+        it's clear that detecting concurrency problems can't be any easier
+	than the
+	<link url="http://en.wikipedia.org/wiki/Halting_problem">Halting Problem</link>, which is itself unsolvable.  
+        So we can't write a checker which takes a concurrent program as
+	input and always determines whether it's free of (say) deadlock.
+      </para>
+
+      <para id="para28">
+        But just as we can study individual programs and conclude whether
+	or not they will halt,
+	for many real-world concurrent programs, we <emphasis>can</emphasis>
+        determine whether or not they are susceptible to deadlock.
+	For example, communications protocols
+	generally have a finite number of options and are amenable to automated
+	checking.
+        Thus automated tools (such as SPIN) are valuable aid in catching
+	and eliminating real-world bugs.
+      </para>
+    </section>
+  </content>  
+</document>

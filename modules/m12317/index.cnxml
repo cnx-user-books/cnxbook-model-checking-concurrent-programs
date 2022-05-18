@@ -1,0 +1,2208 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml">
+  <title>Using Temporal Logic to Specify Properties</title>
+  <metadata><md:content-id>undefined</md:content-id><md:title/><md:uuid>196581af-b0bb-4801-a33b-39f38fb5bf35</md:uuid>
+</metadata>
+
+  <content>
+
+    <para id="para1">
+      So far, we've seen some of the built-in checks performed by SPIN:
+      assertions, deadlock, non-progress, and one notion of fairness.
+      But what about other properties we'd like to check for?
+      We might be interested in properties which the implementors of
+      our particular tool weren't interested in, or hadn't thought of.
+      Fortunately, SPIN does include 
+      a general property-checking mechanism:
+      If we can state our property in a particular 
+      formal <term>temporal logic</term>,
+      then SPIN will allow us to check the property.
+    </para>
+
+    <para id="para2">
+      First, we'll introduce the syntax and semantics of
+      one particular temporal logic, <term>LTL</term>.
+      <link document="m12317" target-id="temporal_spin">Then</link>, we'll return
+      we'll return to SPIN and how 
+      it uses temporal logic for verification.
+    </para>
+
+    
+    <para id="para3">
+      First, we reflect that
+      some properties — safety properties — can be
+      phrased in terms of ``some particular state is unreachable''.
+      For example, a state where two processes are sending information
+      to the printer simultaneously never occurs.
+      Failed assertions can be viewed as a transition to a fail-state,
+      and we require that this state is unreachable.
+      Deadlock can be viewed as a state with no legal outgoing transition,
+      and not all processes sitting in an end-state.
+    </para>
+
+    <para id="para4">
+      Similarly we reflect that other properties —
+      liveness properties —
+      are about entire traces, not just some state in a trace.
+      For instance, non-progress cycles is a cycle which does not contain
+      any states labeled as progress states.
+    </para>
+
+    <para id="para5">
+      We want a richer language to have a way of talking about traces,
+      but that is precise and not subject to English's vagaries.
+      We'll work towards using logic — a temporal logic specifically
+      designed to be
+      conducive to expressing concepts which arise in concurrent programming.
+      But before we can even do that, we need a clear model of
+      concurrent programs,
+      and more formal definitions of some ideas we've already seen.
+    </para>
+
+
+    <section id="section1">
+      <title>Concurrent Programs as State Space Automata</title>
+
+      <para id="para6">
+        The notions we've seen of 
+        <link document="m12316" target-id="promela-state-definition">states</link>, 
+        <link document="m12316" target-id="promela-trace-definition">traces</link>,  and
+        <link document="m12316" target-id="promela-state-space-definition">state spaces</link>
+        aren't specific to Promela, 
+        but are useful in any formalization of concurrent systems.
+        In fact, we are ready to give one precise definition of a
+        ``concurrent system'' in terms states and traces.
+        It is similar to many
+        <link url="http://en.wikipedia.org/wiki/Automata_theory">conventional automata definitions</link>,
+        but includes a way to relate the current state to
+        <link document="m10715">propositions</link>,
+        which we can later construct formulas out of.
+      </para>
+
+      <definition id="definition1">
+        <term>State Space Automaton</term>
+        <meaning id="idm823408">
+	  A State Space Automaton
+          <m:math><m:ci>A</m:ci></m:math>
+          is a tuple
+          <m:math><m:mfenced open="&lt;" close="&gt;" separators=", ">
+            <m:ci type="set">S</m:ci>
+	    <m:msub><m:ci>s</m:ci><m:cn>0</m:cn></m:msub>
+            <m:ci type="function">T</m:ci>
+            <m:ci type="set">Prop</m:ci>
+	    <m:ci type="function">P</m:ci>
+          </m:mfenced></m:math>
+          where:
+
+          <list id="list1">
+            <item>
+              <m:math><m:ci type="set">S</m:ci></m:math> is a set of states.
+              As
+              <link document="m12316" target-id="promela-state-definition">before</link>,
+              a <term>state</term> is
+              an assignment to all program variables (both local an global),
+              including the program counter (line number) for each process.
+            </item>
+
+            <item>
+              <m:math><m:apply>
+                <m:in/>
+                <m:msub><m:ci>s</m:ci><m:cn>0</m:cn></m:msub>
+                <m:ci type="set">S</m:ci>
+              </m:apply></m:math>
+              is the <term>initial state</term> or <term>start state</term>.
+            </item>
+
+            <item>
+              <m:math><m:apply>
+                <m:subset/>
+                <m:ci type="function">T</m:ci>
+                <m:apply>
+                  <m:cartesianproduct/>
+                  <m:ci type="set">S</m:ci>
+                  <m:ci type="set">S</m:ci>
+                </m:apply>
+              </m:apply></m:math>
+              is the <term>transition relation</term>.
+              Equivalently, this is the edge relation of the 
+              <link document="m12316" target-id="promela-state-space-definition">state space</link>.
+            </item>
+          
+            <item>
+              <m:math><m:ci type="set">Prop</m:ci></m:math>, a set of
+              propositions.
+            </item>
+
+            <item>
+              <m:math><m:mrow>
+                <m:ci type="function">P</m:ci>
+                <m:mo>:</m:mo>
+                <m:mrow><m:ci type="set">S</m:ci><m:mo>→</m:mo><m:apply><m:power/><m:cn>2</m:cn><m:ci type="set">Prop</m:ci></m:apply></m:mrow>
+              </m:mrow></m:math>
+              is a mapping which, given a state, indicates
+              all the properties that are true in that state.
+            </item>
+
+          </list>
+        </meaning>
+      </definition>
+
+      <para id="para7">
+        It is the set <m:math><m:ci type="set">Prop</m:ci></m:math> which will allow us to talk about our
+        program variables in our logic formulas.
+        The elements of <m:math><m:ci type="set">Prop</m:ci></m:math> are simple propositions 
+        involving program variables.  For example,
+
+        <list id="list2">
+          <item>
+            <m:math><m:ci>philosopher_2_has_fork</m:ci></m:math>
+          </item>
+
+          <item>
+             <m:math><m:mrow><m:mo>(</m:mo><m:apply><m:gt/><m:ci>ctr</m:ci><m:cn>3</m:cn></m:apply><m:mo>)</m:mo></m:mrow></m:math>
+          </item>
+
+          <item>
+            <m:math><m:ci>(in[].size() == max_buffer_size)</m:ci></m:math>
+            (that is, the buffer <code display="inline">in[]</code> is full)
+          </item>
+        </list>
+
+        Each of these might be true in some states and false in other states;
+        the function <m:math><m:ci type="function">P</m:ci></m:math> gives
+        a truth assignment to the propositions
+        (a different truth assignment for each state).
+      </para>
+
+      <definition id="definition2">
+        <term>Trace</term>
+        <meaning id="idm10154304">
+          Given a state space automaton,
+          a <term>trace</term> <m:math><m:ci>σ</m:ci></m:math>
+          (sometimes called an <term><m:math><m:ci>ω</m:ci></m:math>-trace</term>)
+          is a (possibly infinite) sequence of states
+          <m:math><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub></m:math>,
+          <m:math><m:msub><m:ci>σ</m:ci><m:cn>1</m:cn></m:msub></m:math>,
+          <m:math><m:msub><m:ci>σ</m:ci><m:cn>2</m:cn></m:msub></m:math>,
+          …
+          which respects the automaton's 
+          transtion relation <m:math><m:ci type="function">T</m:ci></m:math>.
+        </meaning>
+      </definition>
+
+      <para id="para8">
+        Thus a trace is a path through the state space (as we have 
+        <link document="m12316" target-id="promela-state-space-definition">already seen</link>).
+        Now that we have logic propositions associated with each state,
+        we can see that during a trace, those propositions will change
+        their truth value over time.
+        We'll illustrate this with diagrams like the following.
+      </para>
+
+      <figure id="trace1_diag">
+        
+
+        <media id="idm9550496" alt=""><image src="../../media/always_if_p_q_timeline.png" mime-type="image/png"/></media>
+        <caption>
+          A timing diagram
+          for a trace <m:math><m:ci>σ</m:ci></m:math>, and propositions <m:math><m:ci>p</m:ci></m:math> and <m:math><m:ci>q</m:ci></m:math>.
+          Each propositional variable's value during the trace
+          is depicted as a line.  When the line is high, the proposition
+          is true; when low, false.
+        </caption>
+      </figure>
+
+      <para id="para9"> 
+        In this example, <m:math><m:ci>p</m:ci></m:math> and <m:math><m:ci>q</m:ci></m:math> are propositions 
+        from <m:math><m:ci type="set">Prop</m:ci></m:math>.
+        Since in the trace <m:math><m:ci>σ</m:ci></m:math>, we have <m:math><m:ci>p</m:ci></m:math> being true at (for example)
+        index 2, we write 
+        <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>2</m:cn></m:msub> <m:mo>⊧</m:mo> <m:ci>p</m:ci></m:mrow></m:math>.
+        In this diagram, it is also the case that 
+        <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>∨</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>.
+        <footnote id="idm9259776">
+          Technically, these diagrams are a bit too suggestive:
+          a trace is only a sequence of discrete states,
+          with no concept of time existing in between states.
+          And the numbering of the <m:math><m:ci>x</m:ci></m:math>-axis is only an index to the sequence
+          of states — it's not meant to imply that the system's states
+          necessarily correspond to periodic samplings of our program.
+          
+          Yes, it would be more accurate to replace these continuous timelines
+          with a textual list of <m:math><m:true/></m:math> and <m:math><m:false/></m:math>
+          (to represent the automaton's mapping
+           <m:math><m:ci type="function">P</m:ci></m:math>).
+          However, the diagrams better communicate information to us humans,
+          especially those familiar with such timelines as used by
+          hardware circuit designers.
+          We just need to be careful not to read in between the times.
+        </footnote>
+      </para>
+
+      <para id="para10">
+        Although a bit unintuitive at first, it will be convenient to convert
+        all finite traces into infinite ones.
+        To do the conversion, we simply envision that once the automaton 
+        reaches its ostensibly last (<m:math><m:ci>n</m:ci></m:math>th) state, it languishes furiously
+        in that state over and over:
+      </para>
+    
+      <definition id="definition-stutter-extend">
+        <term>Stutter-Extend</term>
+        <meaning id="idm1600368">
+          The finite trace
+          <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub><m:mtext>,</m:mtext><m:mtext>…</m:mtext><m:mtext>,</m:mtext><m:msub><m:ci>σ</m:ci><m:ci>n</m:ci></m:msub></m:mrow></m:math>
+          can be stutter-extended to the infinite trace 
+          <m:math><m:mrow>
+            <m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub><m:mtext>,</m:mtext>
+            <m:mtext>…,</m:mtext>
+            <m:msub><m:ci>σ</m:ci><m:ci>n</m:ci></m:msub><m:mtext>,</m:mtext>
+            <m:msub><m:ci>σ</m:ci><m:ci>n</m:ci></m:msub><m:mtext>,</m:mtext>
+            <m:msub><m:ci>σ</m:ci><m:ci>n</m:ci></m:msub><m:mtext>,</m:mtext>
+            <m:mtext>…</m:mtext>
+          </m:mrow></m:math>.
+        </meaning>
+      </definition>
+
+      <para id="para11">
+       To ensure this still satisfies the definition of a trace (where 
+       successive states must obey the automaton's transition relation),
+       it is often assumed that every state has a transition to itself.
+       Note that this convention precludes assuming that something
+       must change between one state and the next,
+       which is plausible since we are modeling asynchronous systems.
+       This will be reflected in our formal logic below, which will
+       have no built-in primitive for ``the-next-state''.
+      </para>
+    </section> 
+
+      
+    <section id="section2">
+      <title>State Formulas</title>
+      <para id="para12">
+        Now that we have a formal model of what a trace is,
+        we can start to make formal statements about what happens in a trace.
+        The simplest statements are <term>state formulas</term>,
+        <foreign>i.e.</foreign>, propositional formulas
+        built out of <m:math><m:ci type="set">Prop</m:ci></m:math>.
+        For a given trace <m:math><m:ci>σ</m:ci></m:math> and state formula <m:math><m:ci>ψ</m:ci></m:math>,
+        we can immediately decide whether
+        a particular state <m:math><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub></m:math> satisifes <m:math><m:ci>ψ</m:ci></m:math>
+        (notationally, 
+         ``<m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:ci>ψ</m:ci></m:mrow></m:math>'').
+        <note type="Notation Abuse Alert" id="idm9897904"><label>Notation Abuse Alert</label>
+          Deciding whether some particular state of a trace satisfies
+          a formula also depends implicitly on the automaton <m:math><m:ci>Σ</m:ci></m:math>.
+          Technically we should write 
+          <m:math><m:mrow><m:ci>Σ</m:ci><m:mtext>,</m:mtext><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:ci>ψ</m:ci></m:mrow></m:math>,
+          though in practice <m:math><m:ci>Σ</m:ci></m:math> is clear from context.
+        </note>
+      </para>
+
+      <example id="example1">
+        <para id="para13">
+          For example, given a trace <m:math><m:ci>σ</m:ci></m:math>, we might ask 
+          about what is 
+          <link url="http://babylon5.cybersite.com.au/lurk/synops/006.html">happening</link>
+          at 
+          <m:math><m:msub><m:ci>σ</m:ci><m:cn>957</m:cn></m:msub></m:math>,
+          and whether
+          <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>957</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>¬</m:mo><m:ci>Proc1_is_printing</m:ci></m:mrow></m:mrow></m:math>,
+          or whether
+          <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>957</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:apply><m:gt/><m:ci>ctr</m:ci><m:cn>3</m:cn></m:apply><m:mo>)</m:mo></m:mrow><m:mo>→</m:mo><m:ci>philosopher_2_has_fork</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>.
+          The answer would be found by taking the automaton's 
+          function <m:math><m:ci type="function">P</m:ci></m:math>,
+          and seeing what values the truth assignment 
+          <m:math><m:apply>
+            <m:ci type="function">P</m:ci>
+            <m:msub><m:ci>σ</m:ci><m:cn>957</m:cn></m:msub>
+          </m:apply></m:math>
+          assigns to our formula's individual propositions such as 
+          <m:math><m:mrow><m:mo>(</m:mo><m:apply><m:gt/><m:ci>ctr</m:ci><m:cn>3</m:cn></m:apply><m:mo>)</m:mo></m:mrow></m:math>.
+        </para>
+      </example>
+
+      <example id="example2">
+        <para id="para14">
+          Consider the trace <m:math><m:ci>σ</m:ci></m:math> we
+          <link target-id="trace1_diag">saw previously</link>
+          and is repeated here.
+        </para>
+
+        <figure id="figure2">
+          <media id="idm9669408" alt=""><image src="../../media/always_if_p_q_timeline.png" mime-type="image/png"/></media>
+          <caption>
+            A timing diagram
+            for a trace <m:math><m:ci>σ</m:ci></m:math>, and propositions <m:math><m:ci>p</m:ci></m:math> and <m:math><m:ci>q</m:ci></m:math>.
+          </caption>
+        </figure>
+
+        <para id="para15">
+          For which <m:math><m:ci>i</m:ci></m:math> does
+          <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>∧</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>?
+          For which <m:math><m:ci>i</m:ci></m:math> does
+          <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>∨</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>?
+          How about <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>→</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>?
+        </para>
+      </example>
+
+
+      <para id="para16">
+        However it doesn't make sense <foreign>a priori</foreign> to ask 
+        whether an
+        <emphasis>entire trace</emphasis> satisfies some 
+        particular state formula;
+        unlike regular propositional logic, the truth of state formulas
+        changes over time, as the trace <m:math><m:ci>σ</m:ci></m:math> progresses.
+      </para>
+    </section> 
+
+
+    <section id="section3">
+      <title>Introducing Temporal Connectives</title>
+
+      <para id="para17">
+        So, how <emphasis>do</emphasis> we talk about formulas holding
+        (or not) over time?
+        In addition to making formulas out of 
+        <m:math><m:mo>∧</m:mo></m:math>,<m:math><m:mo>∨</m:mo></m:math>,<m:math><m:mo>¬</m:mo></m:math> 
+        and propositions from the set
+        <m:math><m:ci type="set">Prop</m:ci></m:math>,
+        we'll allow the use of <term>temporal connectives</term>.
+        
+        <list id="list3">
+          <item>
+            <term><m:math><m:mo>□</m:mo></m:math></term> —  <term>always</term>,
+            or <term>henceforth</term>: We say that
+            <m:math><m:mrow><m:mo>□</m:mo><m:ci>φ</m:ci></m:mrow></m:math> is true at a moment <m:math><m:ci>i</m:ci></m:math>,
+            iff <m:math><m:ci>φ</m:ci></m:math> is true from moment <m:math><m:ci>i</m:ci></m:math> onwards.
+          </item>
+          
+          <item>
+            <term><m:math><m:mo>◇</m:mo></m:math></term> —  <term>eventually</term>:
+            We say that <m:math><m:mrow><m:mo>◇</m:mo><m:ci>φ</m:ci></m:mrow></m:math> is true at moment <m:math><m:ci>i</m:ci></m:math>,
+            iff <m:math><m:ci>φ</m:ci></m:math> will eventually be true at moment <m:math><m:ci>i</m:ci></m:math> or later.
+          </item>
+
+          <item>
+            <term><m:math><m:mo>U</m:mo></m:math></term> —  <term>strong until</term>:
+            We say that
+            <m:math><m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>U</m:mo><m:ci>ψ</m:ci><m:mo>)</m:mo></m:mrow></m:math> is true at moment <m:math><m:ci>i</m:ci></m:math>,
+            iff <m:math><m:ci>ψ</m:ci></m:math> eventually becomes true, and
+            until then <m:math><m:ci>φ</m:ci></m:math> is true.
+          </item>
+
+          <item>
+            <term><m:math><m:mo>W</m:mo></m:math></term> — <term>weak until</term>:
+            Like Strong Until, but without the requirement
+            that <m:math><m:ci>ψ</m:ci></m:math> eventually becomes true.
+          </item>
+        </list>
+      </para>
+      
+      <para id="para18">
+        As a mnemonic for the symbols ``<m:math><m:mo>□</m:mo></m:math>'' and
+        ``<m:math><m:mo>◇</m:mo></m:math>'', we can imagine a square block of wood
+        sitting on a table.
+        Orienting it like <m:math><m:mo>□</m:mo></m:math>, it will always sit there;
+        orienting it like <m:math><m:mo>◇</m:mo></m:math>, it will eventually teeter.
+        
+      </para>
+
+      <para id="para19">
+        More formally, we define these connectives as follows.
+      </para>
+
+      <definition id="definition4">
+        <term>Always</term>
+        <meaning id="idp150512">
+          <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>□</m:mo><m:ci>φ</m:ci></m:mrow></m:mrow></m:math>
+           iff
+           <m:math><m:mo>∀</m:mo><m:mrow><m:ci>j</m:ci><m:mo>≥</m:mo><m:ci>i</m:ci></m:mrow><m:mtext>.</m:mtext>
+             
+             <m:mrow><m:msub><m:ci>σ</m:ci><m:ci>j</m:ci></m:msub> <m:mo>⊧</m:mo> <m:ci>φ</m:ci></m:mrow></m:math>
+           
+        </meaning>
+
+        <example id="always_diag">
+          <figure id="figure3">
+            <media id="idm2704144" alt=""><image src="../../media/always_p_timeline.png" mime-type="image/png"/></media>
+            <caption>
+              A generic trace <m:math><m:ci>σ</m:ci></m:math> satisfying 
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>□</m:mo><m:ci>p</m:ci></m:mrow></m:mrow></m:math>.
+              <m:math><m:ci>p</m:ci></m:math> is true in state <m:math><m:ci>i</m:ci></m:math> and all later states.
+            </caption>
+          </figure>
+        </example>
+      </definition>
+
+      <exercise id="exercise1">
+<problem id="idm10313792">
+          <para id="para20">
+            Decide whether each is true or false for following trace <m:math><m:ci>σ</m:ci></m:math>
+            (the same one seen
+             <link target-id="trace1_diag">earlier</link>).
+          </para>
+
+          <figure id="figure4">
+            <media id="idm9428208" alt=""><image src="../../media/always_if_p_q_timeline.png" mime-type="image/png"/></media>
+            <caption>
+              A timing diagram
+              for a trace <m:math><m:ci>σ</m:ci></m:math>, and propositions <m:math><m:ci>p</m:ci></m:math> and <m:math><m:ci>q</m:ci></m:math>
+            </caption>
+          </figure>
+         
+<list id="list4" list-type="enumerated">
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>9</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>□</m:mo><m:ci>q</m:ci></m:mrow></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>9</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>□</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow></m:mrow></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>□</m:mo><m:ci>q</m:ci></m:mrow></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>□</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>→</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:mrow></m:math>
+            </item>
+</list>
+</problem>
+
+<solution id="idm9166880">
+<list id="list5" list-type="enumerated">
+<item>
+              True; from <m:math><m:msub><m:ci>σ</m:ci><m:cn>9</m:cn></m:msub></m:math> onwards, <m:math><m:ci>q</m:ci></m:math> stays true.
+            </item>
+<item>
+              True.  Even stronger, 
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>7</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>□</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow></m:mrow></m:mrow></m:math>.
+            </item>
+<item>
+              False, since <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>3</m:cn></m:msub> <m:mo>⊭</m:mo> <m:ci>q</m:ci></m:mrow></m:math>.
+            </item>
+<item>
+              True, since at each individual index <m:math><m:ci>i</m:ci></m:math> (from 0 on up),
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>→</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>.
+            </item>
+</list>
+</solution>
+</exercise>
+
+
+      <definition id="definition5">
+        <term>Eventually</term>
+        <meaning id="idm1750384">
+          <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>◇</m:mo><m:ci>φ</m:ci></m:mrow></m:mrow></m:math>
+          iff
+          <m:math><m:mo>∃</m:mo><m:mrow><m:ci>k</m:ci><m:mo>≥</m:mo><m:ci>i</m:ci></m:mrow><m:mtext>.</m:mtext>
+            
+            <m:mrow><m:msub><m:ci>σ</m:ci><m:ci>k</m:ci></m:msub> <m:mo>⊧</m:mo> <m:ci>φ</m:ci></m:mrow></m:math>
+          
+        </meaning>
+
+        <example id="example4">
+          <figure id="eventually_diag">
+            <media id="idm9126032" alt=""><image src="../../media/eventually_q_timeline.png" mime-type="image/png"/></media>
+            <caption>
+              A generic trace <m:math><m:ci>σ</m:ci></m:math> satisfying 
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>◇</m:mo><m:ci>q</m:ci></m:mrow></m:mrow></m:math>.
+              <m:math><m:ci>q</m:ci></m:math> is true in some state <m:math><m:ci>k</m:ci></m:math> after state <m:math><m:ci>i</m:ci></m:math>.
+            </caption>
+          </figure>
+        </example>
+      </definition>
+
+      <exercise id="exercise2">
+<problem id="idm1825456">
+          <para id="para21">
+            Decide whether each is true or false for the trace <m:math><m:ci>σ</m:ci></m:math>
+            seen
+             <link target-id="trace1_diag">earlier</link>.
+          </para> 
+         
+<list id="list6" list-type="enumerated">
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>9</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>◇</m:mo><m:ci>p</m:ci></m:mrow></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>9</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>◇</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow></m:mrow></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>◇</m:mo><m:ci>q</m:ci></m:mrow></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>◇</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>q</m:ci></m:mrow></m:mrow></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>9</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>◇</m:mo><m:mrow><m:mo>(</m:mo><m:ci>q</m:ci><m:mo>→</m:mo><m:ci>p</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>◇</m:mo><m:mrow><m:mo>¬</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>→</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:mrow></m:mrow></m:math>
+            </item>
+</list>
+</problem>
+
+<solution id="idm1292288">
+<list id="list7" list-type="enumerated">
+<item>
+              False; from <m:math><m:msub><m:ci>σ</m:ci><m:cn>9</m:cn></m:msub></m:math> onwards,
+              <m:math><m:ci>p</m:ci></m:math> stays false.
+            </item>
+<item>
+              True.
+              This is a much weaker statement than 
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>9</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>□</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow></m:mrow></m:mrow></m:math>,
+              which we already saw was true.
+            </item>
+<item>
+              Extremely true, since <m:math><m:ci>q</m:ci></m:math> is already true
+              in <m:math><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub></m:math>
+              (and elsewhere, too).
+            </item>
+<item>
+              True, since <m:math><m:mrow><m:mo>¬</m:mo><m:ci>q</m:ci></m:mrow></m:math> is true in
+              <m:math><m:msub><m:ci>σ</m:ci><m:cn>3</m:cn></m:msub></m:math> (and elsewhere too). 
+            </item>
+<item>
+              False.
+            </item>
+<item>
+             
+              False.  We already mentioned that 
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>□</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>→</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:mrow></m:math>;
+              if you think about it, this means that
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>¬</m:mo>
+                  <m:mrow><m:mo>◇</m:mo><m:mrow><m:mo>¬</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>→</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:mrow>
+                </m:mrow></m:mrow></m:math>.
+              (While we won't spend time discussing 
+               <link document="m10717">algebraic equivalences</link>
+               for LTL formulas, this is certainly reminiscent of
+               <link document="m10540">DeMorgan's Law</link>.)
+              
+            </item>
+</list>
+</solution>
+</exercise>
+
+      <para id="para22">
+        Before continuing on with our two other connectives 
+        (strong- and weak-until),
+        let's pull back a bit and look at our notation.
+
+        <note type="Notation Abuse Alert" id="idm10399280"><label>Notation Abuse Alert</label>
+          The nit-picky — er, the <emphasis>careful</emphasis> reader 
+          will have noticed that although we write 
+          <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mtext>…</m:mtext></m:mrow></m:math>,
+          really, the truth value of the formula 
+          depends not on just a single state, but rather
+          that state and the entire suffix of the trace after that.
+          So writing 
+          <m:math><m:mrow><m:mfenced open="&lt;" close="&gt;" separators=", "><m:ci>σ</m:ci> <m:ci>i</m:ci></m:mfenced> <m:mo>⊧</m:mo> <m:mtext>…</m:mtext></m:mrow></m:math>
+          would be more accurate.
+          Moreover, we are using not just the trace but also the
+          timing diagrams, which are just the graph of an 
+          automaton <m:math><m:ci>A</m:ci></m:math>'s
+          mapping function (``<m:math><m:ci type="function">P</m:ci></m:math>'').
+          Thus the correct formulation really needs to be written
+          <m:math><m:mrow><m:mfenced open="&lt;" close="&gt;" separators=", "><m:ci>A</m:ci> <m:ci>σ</m:ci> <m:ci>i</m:ci></m:mfenced> <m:mo>⊧</m:mo> <m:mtext>…</m:mtext></m:mrow></m:math>
+          (and it is required that <m:math><m:ci>σ</m:ci></m:math> be a legal trace 
+           with respect to the transitions of <m:math><m:ci>A</m:ci></m:math>).
+          However, now that we realize our abuse of notation, 
+          we'll revert and just write 
+          <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mtext>…</m:mtext></m:mrow></m:math>.
+        </note>
+
+        In practice, we are often considering an entire trace,
+         and wondering whether some property holds always or eventually.
+        It's extremely natural to extend our notation
+           from particular indices to the trace itself:
+        <note type="definition" id="idp980432"><label>Definition</label>
+          <emphasis>Trace <m:math><m:ci>σ</m:ci></m:math> models formula <m:math><m:ci>φ</m:ci></m:math></emphasis> 
+          (``<m:math><m:mrow><m:ci>σ</m:ci> <m:mo>⊧</m:mo> <m:ci>φ</m:ci></m:mrow></m:math>'')
+           iff <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:ci>φ</m:ci></m:mrow></m:math>.
+        </note>
+
+        For example, from the above exercises, since 
+        <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>→</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>,
+        we say simply
+        <m:math><m:mrow><m:ci>σ</m:ci> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>→</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>.
+      </para>
+
+
+      <definition id="definition6">
+        <term>Strong Until</term>
+        <meaning id="idm1746016">
+          <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>U</m:mo><m:ci>ψ</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+          iff
+          <m:math><m:mo>∃</m:mo><m:apply><m:geq/><m:ci>k</m:ci><m:ci>i</m:ci></m:apply><m:mtext>.</m:mtext>
+            
+             <m:mrow><m:mo>(</m:mo><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>k</m:ci></m:msub> <m:mo>⊧</m:mo> <m:ci>ψ</m:ci></m:mrow><m:mo>∧</m:mo><m:mo>∀</m:mo><m:ci>j</m:ci><m:mtext>.</m:mtext>
+                 <m:mrow><m:mo>(</m:mo><m:mrow>
+                     <m:ci>i</m:ci> <m:mo>≤</m:mo> <m:ci>j</m:ci> <m:mo>&lt;</m:mo> <m:ci>k</m:ci>
+                   </m:mrow><m:mo>→</m:mo><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>j</m:ci></m:msub> <m:mo>⊧</m:mo> <m:ci>φ</m:ci></m:mrow><m:mo>)</m:mo></m:mrow>
+               <m:mo>)</m:mo></m:mrow></m:math>
+          .
+        </meaning>
+
+        <example id="example5">
+          <figure id="figure6">
+            <media id="idm9537584" alt=""><image src="../../media/suntil_r_s_timeline.png" mime-type="image/png"/></media>
+            <caption>
+              A generic trace <m:math><m:ci>σ</m:ci></m:math> satisfying 
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>r</m:ci><m:mo>U</m:mo><m:ci>s</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>.
+              <m:math><m:ci>r</m:ci></m:math> is true in states <m:math><m:ci>i</m:ci></m:math> through
+              <m:math><m:mrow><m:mo>(</m:mo><m:apply><m:minus/><m:ci>k</m:ci><m:cn>1</m:cn></m:apply><m:mo>)</m:mo></m:mrow></m:math>.
+            </caption>
+          </figure>
+        </example>
+      </definition>
+
+      <exercise id="exercise3">
+<problem id="idm9438720">
+          <para id="para23">
+            Decide whether each is true or false for following trace <m:math><m:ci>σ</m:ci></m:math>:
+            (This is the same trace seen
+             <link target-id="trace1_diag">earlier</link>.)
+           </para> 
+        <figure id="figure7">
+          <media id="idm366864" alt=""><image src="../../media/always_if_p_q_timeline.png" mime-type="image/png"/></media>
+          <caption>
+            A timing diagram
+            for a trace <m:math><m:ci>σ</m:ci></m:math>, and propositions <m:math><m:ci>p</m:ci></m:math> and <m:math><m:ci>q</m:ci></m:math>.
+          </caption>
+        </figure>
+
+         
+<list id="list8" list-type="enumerated">
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>q</m:ci><m:mo>U</m:mo><m:ci>p</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>2</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>q</m:ci><m:mo>U</m:mo><m:ci>p</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>5</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>q</m:ci><m:mo>U</m:mo><m:ci>p</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>9</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>q</m:ci><m:mo>U</m:mo><m:ci>p</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+            </item>
+</list>
+</problem>
+
+<solution id="idm8907760">
+<list id="list9" list-type="enumerated">
+<item>
+              
+                True. <m:math><m:ci>q</m:ci></m:math> is true in <m:math><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub></m:math>, and it
+                doesn't take long before <m:math><m:ci>p</m:ci></m:math> becomes
+                true in <m:math><m:msub><m:ci>σ</m:ci><m:cn>1</m:cn></m:msub></m:math>.
+              
+            </item>
+<item>
+              
+                False.  
+                Starting at <m:math><m:msub><m:ci>σ</m:ci><m:cn>2</m:cn></m:msub></m:math>, we see that
+                <m:math><m:ci>p</m:ci></m:math> doesn't become true until <m:math><m:msub><m:ci>σ</m:ci><m:cn>5</m:cn></m:msub></m:math>,
+                yet <m:math><m:ci>q</m:ci></m:math> doesn't stay true that long.
+              
+            </item>
+<item>
+              Very true, since <m:math><m:ci>p</m:ci></m:math> is <emphasis>already</emphasis> true in
+              <m:math><m:msub><m:ci>σ</m:ci><m:cn>5</m:cn></m:msub></m:math>.
+              (In the definition, take <m:math><m:ci>k</m:ci></m:math>=5;
+               then there are not any <m:math><m:ci>j</m:ci></m:math> to even need to worry about.)
+            </item>
+<item>
+              False.  Since <m:math><m:ci>p</m:ci></m:math> is <m:math><m:false/></m:math> from <m:math><m:msub><m:ci>σ</m:ci><m:cn>9</m:cn></m:msub></m:math> 
+              onward, we can't even find a
+              <m:math><m:mrow><m:mo>(</m:mo><m:apply><m:geq/><m:ci>k</m:ci><m:cn>9</m:cn></m:apply><m:mo>)</m:mo></m:mrow></m:math> such that
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>k</m:ci></m:msub> <m:mo>⊧</m:mo> <m:ci>p</m:ci></m:mrow></m:math>.
+              However, it is true that 
+              <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>9</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>q</m:ci><m:mo>W</m:mo><m:ci>p</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>.
+            </item>
+</list>
+</solution>
+</exercise>
+
+
+      <exercise id="define-weak-until">
+        <problem id="idm10295184">
+          <para id="para24">
+            Give the formal semantics of Weak Until (in the same way we
+            have given semantics for <m:math><m:mo>□</m:mo></m:math>, <m:math><m:mo>◇</m:mo></m:math>, and Strong Until).
+          </para>
+        </problem>
+
+        <solution id="idm953360">
+          <para id="para25">
+            <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>W</m:mo><m:ci>ψ</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+            iff
+            <m:math><m:mrow><m:mo>(</m:mo><m:mo>∀</m:mo><m:mrow><m:ci>j</m:ci><m:mo>≥</m:mo><m:ci>i</m:ci></m:mrow><m:mtext>.</m:mtext>
+                
+                <m:mrow><m:msub><m:ci>σ</m:ci><m:ci>j</m:ci></m:msub> <m:mo>⊧</m:mo> <m:ci>φ</m:ci></m:mrow>
+              <m:mo>∨</m:mo><m:mrow><m:mo>(</m:mo><m:mo>∃</m:mo>
+                    <m:mrow> <m:ci>k</m:ci> <m:mo>≥</m:mo> <m:ci>i</m:ci> </m:mrow>
+                  <m:mtext>.</m:mtext>
+                  
+                  <m:mrow><m:msub><m:ci>σ</m:ci><m:ci>k</m:ci></m:msub> <m:mo>⊧</m:mo> <m:ci>ψ</m:ci></m:mrow>
+                <m:mo>∧</m:mo><m:mo>∀</m:mo>
+                    <m:mrow>
+                      <m:ci>i</m:ci> <m:mo>≤</m:mo> <m:ci>j</m:ci> <m:mo>&lt;</m:mo> <m:ci>k</m:ci>
+                    </m:mrow>
+                  <m:mtext>.</m:mtext>
+                  
+                  <m:mrow><m:msub><m:ci>σ</m:ci><m:ci>j</m:ci></m:msub> <m:mo>⊧</m:mo> <m:ci>φ</m:ci></m:mrow>
+                <m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow></m:math>
+          </para>
+        </solution>
+      </exercise>
+
+      <exercise id="exercise5">
+        <problem id="idp277696">
+          <para id="para26">
+            Weak Until could be omitted from our core set of LTL connectives,
+            since it can be defined in terms of the remaining connectives.  
+            Provide such a definition.  
+            That is, give an LTL formula
+            equivalent to <m:math><m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>W</m:mo><m:ci>ψ</m:ci><m:mo>)</m:mo></m:mrow></m:math>.
+          </para>
+        </problem>
+
+        <solution id="idm620976">
+          <para id="para27">
+            Here are three equivalent definitions.  
+            The first follows directly from the 
+            <link target-id="define-weak-until">above exercise</link>.
+          </para>
+
+          <list id="list10">
+            <item>
+              <m:math><m:mrow><m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>W</m:mo><m:ci>ψ</m:ci><m:mo>)</m:mo></m:mrow><m:mo>≡</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:ci>φ</m:ci></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>U</m:mo><m:ci>ψ</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+            </item>
+              
+            <item>
+              <m:math><m:mrow><m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>W</m:mo><m:ci>ψ</m:ci><m:mo>)</m:mo></m:mrow><m:mo>≡</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>◇</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>φ</m:ci></m:mrow></m:mrow><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>U</m:mo><m:ci>ψ</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+            </item>
+              
+            <item>
+              <m:math><m:mrow><m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>W</m:mo><m:ci>ψ</m:ci><m:mo>)</m:mo></m:mrow><m:mo>≡</m:mo><m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>U</m:mo><m:mrow><m:mo>(</m:mo><m:ci>ψ</m:ci><m:mo>∨</m:mo><m:mrow><m:mo>□</m:mo><m:ci>φ</m:ci></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+            </item>
+          </list>
+        </solution>
+      </exercise>
+
+      <para id="para28">
+        Any logic that includes temporal connectives is a
+        <term>temporal logic</term>.
+        More specifically, this is
+        <term>Linear Temporal Logic</term> (<term>LTL</term>).
+        The ``linear'' part of this name means that
+        we are looking only at
+        individual traces, rather than making formulas that discuss
+        all possible traces of a program.
+        After all, a single program can result in many possible traces.
+        An LTL formula does not allow us to say, for example, that a property
+        holds in all possible executions of the program.
+        However, SPIN overcomes some limitations
+        by essentially testing an LTL formula against all possible traces.
+        Will will return to SPIN in
+        <link target-id="temporal_spin">the next section</link>.
+      </para>
+
+      <para id="para29">
+        In summary, the syntax used in SPIN is given by the
+        following grammar.
+      <table id="table1" summary="">
+<title>SPIN's Grammar for LTL formulas</title>
+<tgroup cols="5">
+
+<tbody><row><entry>ltl</entry>
+           <entry>::=</entry>
+            <entry/>
+            <entry>atom</entry>
+            <entry/>
+      </row>
+<row><entry/>
+           <entry/>
+           <entry>|</entry>
+           <entry>(ltl binop ltl)</entry>
+           <entry/></row>
+<row><entry/>
+           <entry/>
+           <entry>|</entry>
+           <entry>unop ltl</entry>
+           <entry/></row>
+<row><entry/>
+           <entry/>
+           <entry>|</entry>
+           <entry>(ltl)</entry>
+           <entry/></row>
+<row><entry>unop</entry>
+           <entry>::=</entry>
+           <entry/>
+           <entry>[]</entry>
+           <entry>``Always''</entry></row>
+<row><entry/>
+           <entry/>
+           <entry>|</entry>
+           <entry>&lt;&gt;</entry>
+           <entry>``Eventually''</entry></row>
+<row><entry/>
+           <entry/>
+           <entry>|</entry>
+           <entry><code display="inline">!</code></entry>
+           <entry>``Not''</entry></row>
+<row><entry>binop</entry> 
+           <entry>::=</entry>
+           <entry/>
+           <entry><code display="inline">U</code></entry>
+           <entry>``Strong Until''</entry></row>
+<row><entry/>
+           <entry/>   
+           <entry>|</entry>
+           <entry><code display="inline">W</code></entry>   
+           <entry>``Weak Until''</entry></row>
+<row><entry/>
+           <entry/>   
+           <entry>|</entry>
+           <entry><code display="inline">&amp;&amp;</code></entry>   
+           <entry>``And''</entry></row>
+<row><entry/>
+           <entry/>   
+           <entry>|</entry>
+           <entry><code display="inline">||</code></entry>   
+           <entry>``Or''</entry></row>
+<row><entry>atom</entry>
+           <entry>::=</entry>   
+           <entry/>
+           <entry><code display="inline">true</code></entry>   
+           <entry/></row>
+<row><entry/>
+           <entry/>   
+           <entry>|</entry>
+           <entry><code display="inline">false</code></entry>   
+           <entry/></row>
+<row><entry/>
+           <entry/>   
+           <entry>|</entry>
+           <entry><m:math><m:mtext>name</m:mtext></m:math></entry>   
+           <entry><code display="inline">#define</code>'d identifiers</entry></row></tbody>
+</tgroup>
+</table>
+
+      <note type="aside" id="idm3634896">
+        Some presentations of LTL 
+            use a box or ``G'' (Globally) for Always,
+        and use a diamond or ``F'' for Eventually.
+        Confusingly, some use ``U'' for Weak Until.
+        Also, some include additional connectives like
+        ``X'' (Next), 
+        which cannot be defined in terms of those given.
+      </note>
+      </para>
+      </section> 
+
+
+      <section id="section4">
+        <title>Do we really need a whole new logic?</title>
+
+        <para id="para30">
+          We <emphasis>could</emphasis> use regular ol' first-order logic
+          as our formal language for specifying temporal properties.
+          We'd do this by adding an explicit time index to 
+          each proposition in <m:math><m:ci type="set">Prop</m:ci></m:math>,
+          turning it into a unary relation.
+          For example, instead of considering
+          <m:math><m:ci>Philosopher_B_has_fork</m:ci></m:math> in state 17,
+          we'd instead write 
+          <m:math><m:mrow><m:ci type="function">Philosopher_B_has_fork</m:ci><m:mo>⁡</m:mo><m:mo>(</m:mo><m:cn>17</m:cn><m:mo>)</m:mo></m:mrow></m:math>,
+          and so on.
+        </para>
+
+        <para id="para31">
+          This approach, though, quickly becomes cumbersome.
+          Consider the everyday concept ``Someday, X will happen''.
+          We have to go through some contortions to shoehorn this concept into
+          first-order logic:
+          ``There exists a day <m:math><m:ci>d</m:ci></m:math>, such that <m:math><m:ci>d</m:ci></m:math> is today or later,
+          and X will happen on <m:math><m:ci>d</m:ci></m:math>''.
+          Quite a mouthful for 
+          what is about the simplest temporal concept possible!
+        </para>
+
+        <para id="para32">
+          The awkwardness stems from the fact that in English,
+          ``eventually'', ``always'', 
+          and ``until'' are primitives.
+          When we design a formal language to capture with these concepts,
+          shouldn't we too include them as primitives?
+          Having our formal representations reflect our
+          natural conceptions of problems is the
+          <link url="http://www.owlnet.rice.edu/~comp210/01fall/Lectures/lect01.shtml">first law</link> of programming!
+        </para>
+
+        <para id="para33">
+          This is why we have decided to incur the overhead of 
+          defining a new language, LTL.
+          Still, you have noticed that the semantics we've given are phrased
+          in terms of ``<m:math><m:mo>∀</m:mo><m:ci>i</m:ci><m:mtext>.</m:mtext></m:math>…''.
+          From a language designer's perspective, we might say that 
+          LTL is a high-level language,
+          and we give an interpreter for it written in first-order logic
+          (over the domain of trace-indices).
+        </para>
+      </section> 
+
+
+      <section id="section5">
+        <title>Translating between English and LTL: Examples</title>
+
+        <para id="para34">
+          Let's look at how to turn a natural-English specification into
+          temporal logic, and vice versa.
+        </para>
+        
+        <example id="if-request-service">
+          
+          <para id="para35">
+            How might we express the common client/server relationship
+            ``if there is a request (<m:math><m:ci>r</m:ci></m:math>), 
+                   then it will be serviced (<m:math><m:ci>s</m:ci></m:math>)''?
+          </para>
+
+          <para id="para36">
+            Hmm, that seems obvious:  <m:math><m:mrow><m:mo>(</m:mo><m:ci>r</m:ci><m:mo>→</m:mo><m:ci>s</m:ci><m:mo>)</m:mo></m:mrow></m:math> should do it, no?
+            Alas, no.  The problem is, the truth of this 
+            formula — which has no temporal connectives at all — 
+            only depends upon the trace's initial state, <m:math><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub></m:math>
+            — in this case,
+            whether 
+            <m:math><m:mrow><m:msub><m:ci>σ</m:ci><m:cn>0</m:cn></m:msub> <m:mo>⊧</m:mo> <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>r</m:ci></m:mrow><m:mo>∨</m:mo><m:ci>s</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>.
+            This certainly doesn't match our intent, since
+            we want the request and service to be able
+            to happen at points in the future.
+            Let's try again…
+          </para>
+          
+          <exercise id="exercise6">
+            <problem id="idm1598912">
+              <para id="para37">
+                Does the formula <m:math><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>(</m:mo><m:ci>r</m:ci><m:mo>→</m:mo><m:ci>s</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math> 
+                capture the English notion 
+                ``if <m:math><m:ci>r</m:ci></m:math> is true, then <m:math><m:ci>s</m:ci></m:math> will be true''?
+              </para>
+            </problem>
+            
+            <solution id="idm307824">
+              <para id="para38">
+                That's only a bit better: it does now allow the implication
+                <m:math><m:mrow><m:mo>(</m:mo><m:ci>r</m:ci><m:mo>→</m:mo><m:ci>s</m:ci><m:mo>)</m:mo></m:mrow></m:math> to hold in any
+                state <m:math><m:msub><m:ci>σ</m:ci><m:ci>i</m:ci></m:msub></m:math>.
+                But our intent is to allow the servicing <m:math><m:ci>s</m:ci></m:math> to
+                happen <emphasis>after</emphasis> the request <m:math><m:ci>r</m:ci></m:math>.
+                The formula as given only expresses
+                ``Whenever <m:math><m:ci>r</m:ci></m:math> is true,
+                  then <m:math><m:ci>s</m:ci></m:math> is also true at that moment.''
+                If <m:math><m:ci>r</m:ci></m:math> and <m:math><m:mrow><m:mo>¬</m:mo><m:ci>s</m:ci></m:mrow></m:math> both hold at the same time
+                 (which wouldn't be surprising),
+                then <m:math><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>(</m:mo><m:ci>r</m:ci><m:mo>→</m:mo><m:ci>s</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math> fails for that trace.
+              </para>
+            </solution>
+          </exercise>
+          
+          <para id="para39">
+            After more thought, we can get something which
+            <emphasis>does</emphasis> arguably match our intent:
+            <m:math><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>(</m:mo><m:ci>r</m:ci><m:mo>→</m:mo><m:mrow><m:mo>◇</m:mo><m:ci>s</m:ci></m:mrow><m:mo>)</m:mo></m:mrow></m:mrow></m:math>.
+            ``Whenever a request is made, a servicing will 
+                   eventually happen.''
+          </para>
+
+          <para id="para40">
+            However, even this may not be what everybody wants.
+            Some considerations:
+
+            <list id="list11">
+              <item>
+                Even if <m:math><m:ci>r</m:ci></m:math> is raised (and lowered) several times,
+                a single moment of <m:math><m:ci>s</m:ci></m:math> can satisfy the entire trace.
+                This matches an intuition of <m:math><m:ci>r</m:ci></m:math> indicating a single
+                ring of a telephone (and <m:math><m:ci>s</m:ci></m:math> being `pick up the phone'),
+                but may not match the intuition
+                of <m:math><m:ci>r</m:ci></m:math> being ``leave a voicemail''
+                (and <m:math><m:ci>s</m:ci></m:math> being ``respond to a voicemail'').
+                <figure id="figure8">
+                  <media id="idm10367552" alt=""><image src="../../media/request_service_timeline1.png" mime-type="image/png"/></media>
+                  <caption>
+                    A trace showing multiple requests followed by a single
+                    servicing.
+                  </caption>
+                </figure>
+              </item>
+
+              <item>
+                A trace in which <m:math><m:ci>s</m:ci></m:math> is always true (regardless of <m:math><m:ci>r</m:ci></m:math>)
+                certainly satisfies <m:math><m:ci>φ</m:ci></m:math>.  
+                Did you expect the English statement to encompass this?
+              </item>
+
+              <item>
+                Any trace in which requests are serviced
+                <emphasis>instantaneously</emphasis> will satisfy <m:math><m:ci>φ</m:ci></m:math>.
+                While this might be intended, it might also 
+                be a bug of leftover servicings from previous requests.
+                <figure id="figure9">
+                  <media id="idm8741200" alt=""><image src="../../media/request_service_timeline2.png" mime-type="image/png"/></media>
+                  <caption>
+                    A trace showing multiple requests and a single
+                    servicing.  The servicing arguably corresponds to
+                    only the first request and might be an undesired behavior.
+                  </caption>
+                </figure>
+              </item>
+
+              <item>
+                A trace in which a request is never made
+                still satisfies this formula.
+                While that is probably what is intended,
+                it may not have occurred to you from the English statement
+                alone.
+              </item>
+            </list>
+
+            One advantage to having a formal language is that
+            because the semantics are precisely defined,
+            it helps us think about corner cases such as the above
+            (and, gives an unambiguous meaning to the result,
+             good for writing specs).
+          </para>
+        </example>
+
+        <example id="example7">
+          <para id="para41">
+            As a more complicated variation, we generally want to match
+            requests and their servicing.  For example, what if there are two
+            requests,
+            <m:math><m:msub><m:ci>r</m:ci><m:cn>1</m:cn></m:msub></m:math>
+            and
+            <m:math><m:msub><m:ci>r</m:ci><m:cn>2</m:cn></m:msub></m:math>,
+            arriving in that order?
+            In a particular context, do we expect that there are also
+            exactly two servicings,
+            <m:math><m:msub><m:ci>s</m:ci><m:cn>1</m:cn></m:msub></m:math> and
+            <m:math><m:msub><m:ci>s</m:ci><m:cn>2</m:cn></m:msub></m:math>?
+            If so, do we also expect them in that order?
+          </para>
+
+          <exercise id="exercise7">
+            <problem id="idp256160">
+              <para id="para42">
+                As a partial solution, how can we express
+                ``whenever <m:math><m:msub><m:ci>r</m:ci><m:cn>1</m:cn></m:msub></m:math>, 
+                <m:math><m:msub><m:ci>s</m:ci><m:cn>1</m:cn></m:msub></m:math> will happen before 
+                <m:math><m:msub><m:ci>s</m:ci><m:cn>2</m:cn></m:msub></m:math>''?
+              </para>
+            </problem>
+
+            <solution id="idm10182736">
+              <para id="para43">
+                If we are also requiring that <m:math><m:msub><m:ci>s</m:ci><m:cn>2</m:cn></m:msub></m:math>
+                indeed actually happen, then we can use the following:
+                <m:math><m:mrow><m:mo>□</m:mo>
+                  <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:msub><m:ci>r</m:ci><m:cn>1</m:cn></m:msub><m:mo>∧</m:mo><m:mrow><m:mo>◇</m:mo><m:msub><m:ci>s</m:ci><m:cn>2</m:cn></m:msub></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:msub><m:ci>s</m:ci><m:cn>2</m:cn></m:msub></m:mrow><m:mo>U</m:mo><m:msub><m:ci>s</m:ci><m:cn>1</m:cn></m:msub><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow>
+                </m:mrow></m:math>.
+              </para>
+            </solution>
+          </exercise>
+
+          <para id="para44">
+            Note that since LTL does not have quantifiers
+            (like <m:math><m:mo>∀</m:mo></m:math> and ∃)
+            we cannot use variable indexing in our formulas.
+            In other words, we can't talk about <m:math><m:msub><m:ci>r</m:ci><m:ci>i</m:ci></m:msub></m:math> and 
+            <m:math><m:msub><m:ci>s</m:ci><m:ci>j</m:ci></m:msub></m:math>, but instead,
+            must always refer to specific variables like
+            <m:math><m:msub><m:ci>r</m:ci><m:cn>1</m:cn></m:msub></m:math> and <m:math><m:msub><m:ci>s</m:ci><m:cn>2</m:cn></m:msub></m:math>.
+          </para>
+        </example>
+
+        <para id="para45">
+          From these examples and the ones following, we can see
+          that English is typically too ambiguous.  To get the appropriate
+          logic formula, we need to go back to the original problem and
+          determine what was truly meant.
+          Formalizing your specifications into temporal logic gives
+          you the opportunity to closely examine what those specifications
+          really should be.
+        </para>
+
+        <para id="para46">
+          Given a formula, try to understand it by translating it into
+          English.  Providing sample timelines that satisfy the formula
+          is also quite helpful.
+        </para>
+
+        <exercise id="exercise8">
+          <problem id="idp478304">
+            <para id="para47">
+              Describe the meaning of
+              <m:math><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:ci>p</m:ci></m:mrow></m:mrow></m:math>
+              in words and a timeline.
+            </para>
+          </problem>
+
+          <solution id="idp4012832">
+            <para id="para48">
+              Literally, we can simply say
+              ``always, eventually <m:math><m:ci>p</m:ci></m:math>''.  While that
+              phrase is fairly common among logicians, it's not very natural or
+              meaningful to most people.  A clearer, but more long-winded,
+              equivalent is
+              ``at any point in time,
+                <m:math><m:ci>p</m:ci></m:math> will happen in the future''.
+            </para>
+
+            <para id="para49">
+              More concise, though, is
+              ``<m:math><m:ci>p</m:ci></m:math> happens infinitely often''.
+              To understand that, consider a timeline.  In words, at any time
+              <m:math><m:msub><m:ci>t</m:ci><m:cn>0</m:cn></m:msub></m:math>, <m:math><m:ci>p</m:ci></m:math> will 
+              happen sometime in the future; call that time
+              <m:math><m:msub><m:ci>t</m:ci><m:cn>1</m:cn></m:msub></m:math>.
+              And at moment <m:math><m:msub><m:ci>t</m:ci><m:cn>1</m:cn></m:msub></m:math>+1, <m:math><m:ci>p</m:ci></m:math> 
+              will happen sometime in the future; call that 
+              <m:math><m:msub><m:ci>t</m:ci><m:cn>2</m:cn></m:msub></m:math>.
+              Repeat forever.
+            </para>
+
+            <figure id="figure10">
+              <media id="idm832560" alt=""><image src="../../media/always_eventually_p_timeline.png" mime-type="image/png"/></media>
+              <caption>
+                The beginning of a trace where <m:math><m:ci>p</m:ci></m:math> happens
+                infinitely often.
+              </caption>
+            </figure>
+          </solution>
+        </exercise>
+
+        <exercise id="exercise9">
+          <problem id="idm642624">
+            <para id="para50">
+              Describe the meaning of
+              <m:math><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>(</m:mo><m:ci>q</m:ci><m:mo>→</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+              in words and a timeline.
+            </para>
+          </problem>
+
+          <solution id="idp4040800">
+            <para id="para51">
+              Again, a literal translation is
+              ``always, if q then always not p''.
+              Correct, but a bit more idiomatic-English would be
+              ``whenever q, then forever not p'' or
+              ``Once q, p is forever false''.
+            </para>
+
+            <figure id="figure11">
+              <media id="idp4178592" alt=""><image src="../../media/eventually_if_q_always_not_p_timeline.png" mime-type="image/png"/></media>
+              <caption>
+                The beginning of a trace satisfying the property.
+              </caption>
+            </figure>
+          </solution>
+        </exercise>
+
+
+        <example id="example8">
+          <para id="para52">
+            A railroad wants to make a new controller for single-track
+            railroad crossings.
+            Naturally, they don't want any accidents with cars at the crossing,
+            so they want to verify their controller.
+            Their propositions <m:math><m:ci type="set">Prop</m:ci></m:math> include
+            <m:math><m:ci>train_is_approaching</m:ci></m:math>,
+            <m:math><m:ci>train_is_crossing</m:ci></m:math>,
+            <m:math><m:ci>light_is_flashing</m:ci></m:math>, and
+            <m:math><m:ci>gate_is_down</m:ci></m:math>.
+          </para>
+
+          <exercise id="train_ex1">
+            <problem id="idp978816">
+              <para id="para53">
+                Brainstorming:
+                Using natural English, what are some properties
+                we'd like to have true?  Feel free to use words like
+                ``always'', ``eventually'',
+                ``while'', and ``until''.
+                You may add new propositions to <m:math><m:ci type="set">Prop</m:ci></m:math>, 
+                if you think it's appropriate.
+              </para>
+
+              <para id="para54">
+                For each, feel free to demonstrate that 
+                the one property is not sufficient:
+                give a trace which satisfies the property 
+                but is either unacceptable or unrealistic.
+                (For instance, ``the gate is always down''
+                 is safe but unacceptable;
+                 ``a train is always crossing'' is unrealistic
+                 since there aren't infinite trains.)
+              </para>
+            </problem>
+
+            <solution id="idm9527360">
+              <para id="para55">
+                We can think of lots of examples, such as these.
+
+                <list id="list12">
+                  
+                  <item>
+                    Whenever a train passing, the gate is down.
+                  </item>
+
+                  <item>
+                    If a train is approaching or passing,
+                    then the light is flashing.
+                  </item>
+
+                  <item>
+                    If the gate is up and the light
+                    is not flashing, then no train is passing or approaching.
+                  </item>
+
+                  <item>
+                    If a train is approaching, the gate will be down
+                    before the train passes.
+                  </item>
+
+                  <item>
+                    If a train has finished passing, then later the gate
+                    will be up.
+                  </item>
+
+                  <item>
+                    The gate will be up infinitely many times.
+                  </item>
+
+                  <item>
+                    If a train is approaching, then it will be passing,
+                    and later it
+                    will be done passing with no train approaching.
+                    (Thus, trains aren't infinitely long, and there
+                     are gaps between the trains.)
+                  </item>
+                </list>
+              </para>
+            </solution>
+          </exercise>
+
+          <para id="para56">
+            To formalize such statements, we would start with the primitive
+            propositions involved.
+            These could be
+
+            <list id="list13">
+              
+              <item>
+                <m:math><m:ci>a</m:ci></m:math>  (``a train is approaching the crossing'')
+              </item>
+
+              <item>
+                <m:math><m:ci>p</m:ci></m:math>  (``a train is passing the crossing'')
+              </item>
+
+              <item>
+                <m:math><m:ci>l</m:ci></m:math>  (``the light is flashing'')
+              </item>
+
+              <item>
+                <m:math><m:ci>g</m:ci></m:math>  (``the gate is down'')
+              </item>
+            </list>
+          </para>
+
+          <para id="para57">
+            This choice forces us to not refer to individual trains
+            and, thus we must simplify
+            some of our properties, <foreign>e.g.</foreign>,
+            ``If a train is approaching, the gate will be down before
+              the next train passes.''
+            (Think about the consequences of not making this change.)
+          </para>
+
+          <para id="para58">
+            Some of these English descriptions are ambiguous, however.
+            <foreign>E.g.</foreign>, can a single train be approaching
+            and passing simultaneously?
+            When writing formal specifications, 
+            we'll be forced to think about what we mean to say,
+            and provide an unambiguous answer, one way or the other.
+            Continuing this example, we'll say that once a train is passing, it
+            is no longer considered to be approaching.
+          </para>
+
+          <exercise id="exercise11">
+<problem id="idp4003536">
+              <para id="para59">
+                Encode some of the properties from the
+                <link target-id="train_ex1">previous exercise</link>
+                in temporal logic.
+                It is often helpful to first turn the statement into a timeline
+                (essentially a trace).
+              </para>
+            
+<list id="list14" list-type="enumerated">
+<item>
+                  
+                    ``Whenever a train passing, the gate is down.''
+                  
+               </item>
+<item>
+                  
+                    ``If a train is approaching or passing,
+                      then the light is flashing.''
+                  
+               </item>
+<item>
+                  
+                    ``If the gate is up and the light
+                      is not flashing, then no train is passing or approaching.''
+                  
+               </item>
+<item>
+                  
+                    ``If a train is approaching, the gate will be down
+                      before the next train passes.''
+                  
+               </item>
+<item>
+                  
+                    ``If a train has finished passing, then later the
+                      gate will be up.''
+                  
+               </item>
+<item>
+                  
+                    ``The gate will be up infinitely many times.''
+                  
+               </item>
+<item>
+                  
+                    ``If a train is approaching, then it will be passing,
+                      and later it
+                      will be done passing with no train approaching.''
+                  
+               </item>
+</list>
+</problem>
+
+<solution id="idm2226176">
+             <para id="para60">
+              Keep in mind that for any concept,
+              there are many different (but equivalent) formulas
+              for expressing it.
+             </para>
+            
+<list id="list15" list-type="enumerated">
+<item>
+                    <m:math><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>→</m:mo><m:ci>g</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+               </item>
+<item>
+                    <m:math><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:ci>a</m:ci><m:mo>∨</m:mo><m:ci>p</m:ci><m:mo>)</m:mo></m:mrow><m:mo>→</m:mo><m:ci>l</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+               </item>
+<item>
+                    <m:math><m:mrow><m:mo>□</m:mo>
+                      <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>g</m:ci></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>l</m:ci></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>a</m:ci></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow>
+                    </m:mrow></m:math>
+               </item>
+<item>
+                    <figure id="figure12">
+                      
+
+                      <media id="idp1027472" alt=""><image src="../../media/train_timeline1.png" mime-type="image/png"/></media>
+                      <caption>
+                        A trace satisfying this property.
+                      </caption>
+                    </figure>
+
+                    Observe in the trace shown that in one instance,
+                    the gate goes down at the same time the train passes.
+                    In the LTL version we're using, we can't express
+                    the idea
+                    ``… <emphasis>strictly</emphasis> before
+                      the next train passes.''
+                    Instead, we'll allow this simultaneity as a possibility.
+
+                    <m:math><m:mrow><m:mo>□</m:mo>
+                      <m:mrow><m:mo>(</m:mo><m:ci>a</m:ci><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow><m:mo>W</m:mo><m:ci>g</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow>
+                    </m:mrow></m:math>
+
+                    <foreign>I.e.</foreign>, if a train is approaching,
+                    then a train is not passing until the gate is down.
+                    However, this still allows that the gate could be
+                    back up by the time
+                    a train passes, and a train might never pass.
+               </item>
+<item>
+                    <figure id="figure13">
+                      
+
+                      <media id="idp3639856" alt=""><image src="../../media/train_timeline2.png" mime-type="image/png"/></media>
+                      <caption>
+                        A trace satisfying this property.
+                      </caption>
+                    </figure>
+
+                    <m:math><m:mrow><m:mo>□</m:mo>
+                      <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>U</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>→</m:mo><m:mrow><m:mo>◇</m:mo>
+                          <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow><m:mo>→</m:mo><m:mrow><m:mo>◇</m:mo><m:ci>g</m:ci></m:mrow><m:mo>)</m:mo></m:mrow>
+                        </m:mrow><m:mo>)</m:mo></m:mrow>
+                    </m:mrow></m:math>
+
+                    Since our logic cannot talk about the past,
+                    we have to shift our
+                    perspective to start while the train is still passing.
+                    We've effectively reworded the statement to say
+                    that if a train
+                    is passing and will finish passing, then sometime after it
+                    is no longer passing, the gate will be up.
+                    However, the status of the gate at other times
+                    is not commented on.
+                    We're only saying there is one moment after the
+                    train passes that the gate is up.
+               </item>
+<item>
+                    <m:math><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>g</m:ci></m:mrow></m:mrow></m:mrow></m:math>
+               </item>
+<item>
+                    <figure id="figure14">
+                      
+
+                      <media id="idm10227872" alt=""><image src="../../media/train_timeline3.png" mime-type="image/png"/></media>
+                      <caption>
+                        A trace satisfying this property.
+                      </caption>
+                    </figure>
+
+                    <m:math><m:mrow><m:mo>□</m:mo>
+                      <m:mrow><m:mo>(</m:mo><m:ci>a</m:ci><m:mo>→</m:mo><m:mrow><m:mo>◇</m:mo>
+                          <m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>∧</m:mo><m:mrow><m:mo>◇</m:mo>
+                              <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>a</m:ci></m:mrow><m:mo>)</m:mo></m:mrow>
+                            </m:mrow><m:mo>)</m:mo></m:mrow>
+                        </m:mrow><m:mo>)</m:mo></m:mrow>
+                    </m:mrow></m:math>
+               </item>
+</list>
+
+              <para id="para61">
+                This last condition is not something that a controller
+                would enforce.  Instead, we would expect the train
+                scheduling software to enforce this.
+                The controller would be allowed to assume this,
+                and we'd want to verify a property <m:math><m:ci>ψ</m:ci></m:math> only for
+                traces that also satisfy our scheduling assumptions <m:math><m:ci>φ</m:ci></m:math>.
+                Of course, we can also do this by incorporating
+                assumptions into the formulas: <m:math><m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>→</m:mo><m:ci>ψ</m:ci><m:mo>)</m:mo></m:mrow></m:math>.
+              </para>
+            </solution>
+</exercise>
+        </example>
+
+
+
+        <exercise id="exercise12">
+<problem id="idm1066080">
+            <para id="para62">
+              We've previously seen that SPIN knows some
+              built-in concepts such as
+              <link document="m12316" target-id="deadlock_verification">deadlock</link>,
+              <link document="m12316" target-id="livelock_verification">livelock</link>,
+              weak- and 
+              strong-<link document="m12316" target-id="fairness_verification">fairness</link>.
+              We'll see in
+              <link target-id="temporal_spin">the next section</link>
+              that SPIN can also be used
+              to verify <emphasis>any</emphasis> LTL formula.
+              But first, let's characterize some of those built-in
+              concepts as LTL formulas using the context of a print server.
+            </para>
+
+            <para id="para63">
+              We will use the following propositions:
+              <list id="list16">
+                <item>
+                  <m:math><m:ci>b</m:ci></m:math> : This is a bad state.
+                  (It corresponds to Promela <code display="inline">assert(!<m:math><m:ci>b</m:ci></m:math>)</code>).
+                </item>
+
+                <item>
+                  <m:math><m:ci>e</m:ci></m:math> : This is a valid end state.
+                  (It corresponds to all Promela processes being at
+                   an <code display="inline">end</code> label).
+                </item>
+
+                <item>
+                  <m:math><m:msub><m:ci>p</m:ci><m:cn>1</m:cn></m:msub></m:math>, <m:math><m:msub><m:ci>p</m:ci><m:cn>2</m:cn></m:msub></m:math>:
+                   Progress is being made (either of two types of progress);
+                   they correspond to a Promela process 
+                   being at a certain <code display="inline">progress</code> 
+                   label.<footnote id="idm9940448">Promela does includes a
+                         handy syntax for testing whether a particular process
+                         is at a particular label: 
+                           ``<code display="inline">philosopher[3]@eating</code>''
+                         is true when the fourth (0-indexed)
+                         <code display="inline">philosopher</code>
+                         process is at the label <code display="inline">eating</code>.
+                         
+                     </footnote>                
+                </item>
+
+                <item>
+                  <m:math><m:ci>r</m:ci></m:math>: There is a pending request.
+                </item>
+
+                <item>
+                  <m:math><m:ci>s</m:ci></m:math>: A request is being serviced.
+                </item>
+              </list>
+              Give a temporal formula expressing each of the following:
+            </para>
+          
+<list id="list17" list-type="enumerated">
+<item>
+              No error occurs, <foreign>i.e.</foreign>, 
+              we never reach a bad state.
+            </item>
+<item>
+              
+                No deadlock occurs.  
+                (We'll take deadlock here to mean
+                 that all five of our variables stop changing;
+                 without having a different proposition for each state,
+                 this is close enough.)
+              
+            </item>
+<item>
+              
+                Progress is always made.  
+                That is, this trace doesn't go forever without making progress.
+              
+            </item>
+<item>
+              
+              Weak Fairness:
+              if a request is made and held, it will get serviced.
+              <foreign>I.e.</foreign>,
+              it's not the case that a request stays
+              <m:math><m:true/></m:math> forever but is never serviced.
+              
+            </item>
+<item>
+              
+                Strong Fairness:
+                if a request is made infinitely often,
+                then it will be serviced.
+              
+            </item>
+</list>
+</problem>
+
+<solution id="idm2238192">
+            <para id="para64">
+              For each of these problems, 
+              there are many equivalent formulas,
+              some of which are easier to verify as equivalent 
+              than others.
+            </para>
+          
+<list id="list18" list-type="enumerated">
+<item>
+              <m:math><m:mrow><m:mo>□</m:mo> <m:mrow><m:mo>¬</m:mo> <m:ci>b</m:ci> </m:mrow> </m:mrow></m:math>
+            </item>
+<item>
+              
+                <m:math><m:mrow><m:mo>¬</m:mo>
+                  <m:mrow><m:mo>◇</m:mo>
+                    <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:ci>b</m:ci></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>b</m:ci></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:ci>p</m:ci></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:ci>r</m:ci></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>r</m:ci></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:ci>s</m:ci></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>s</m:ci></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>e</m:ci></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow>
+                  </m:mrow>
+                </m:mrow></m:math>.
+                Remember that if we're in an end-state, then it doesn't
+                count as deadlock.
+              
+            </item>
+<item>
+              
+                <m:math><m:mrow><m:mrow><m:mo>□</m:mo>
+                    <m:mrow><m:mo>◇</m:mo>
+                      <m:mrow><m:mo>(</m:mo><m:msub><m:ci>p</m:ci><m:cn>1</m:cn></m:msub><m:mo>∨</m:mo><m:msub><m:ci>p</m:ci><m:cn>2</m:cn></m:msub><m:mo>)</m:mo></m:mrow>
+                    </m:mrow>
+                  </m:mrow><m:mo>≡</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:msub><m:ci>p</m:ci><m:cn>1</m:cn></m:msub></m:mrow></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:msub><m:ci>p</m:ci><m:cn>2</m:cn></m:msub></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow></m:mrow></m:math>.
+                In fact, SPIN provides a built-in variable <code display="inline">np_</code>, 
+                which corresponds to 
+                ``all processes are in a non-progress state''.
+                When SPIN does its built-in check for non-progress cycles,
+                it actually just verifying
+                <code display="inline">!&lt;&gt;[]np_</code>.
+                You might
+                <link document="m12316" target-id="section.progress-surprising">recall</link>
+                that SPIN's idea of progress
+                is state-based, not transition-based:
+                SPIN (counterintuitively) considers
+                it progress when a process does nothing but
+                squat in a <code display="inline">progress</code> state.
+                (This can only happen if weak fairness is not being
+                 enforced, or a guard is being labeled as progress.)
+                How might we capture ``progress'' but still
+                preclude those traces which just sit idly at a progress label?
+                We could add a second progress label immediately following
+                <m:math><m:msub><m:ci>p</m:ci><m:cn>1</m:cn></m:msub></m:math>, call it <m:math><m:msub><m:ci>q</m:ci><m:cn>1</m:cn></m:msub></m:math>.
+                Similarly, we can introduce <m:math><m:msub><m:ci>q</m:ci><m:cn>2</m:cn></m:msub></m:math>.
+                Then we could verify that
+                <m:math><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:msub><m:ci>p</m:ci><m:cn>1</m:cn></m:msub></m:mrow></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:msub><m:ci>q</m:ci><m:cn>1</m:cn></m:msub></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:msub><m:ci>p</m:ci><m:cn>1</m:cn></m:msub></m:mrow></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:msub><m:ci>q</m:ci><m:cn>1</m:cn></m:msub></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow></m:math>.
+                (This assumes that all labels are private to each process.)
+              
+            </item>
+<item>
+              
+                ``It's always not the case that <m:math><m:ci>r</m:ci></m:math> is always on,
+                  and yet <m:math><m:ci>s</m:ci></m:math> doesn't happen an infinite number 
+                  of times'':
+                <m:math><m:mrow><m:mo>¬</m:mo>
+                  <m:mrow><m:mo>□</m:mo>
+                    <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:ci>r</m:ci></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:ci>s</m:ci></m:mrow></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow>
+                  </m:mrow>
+                </m:mrow></m:math>.
+                One equivalent formula is
+                ``if <m:math><m:ci>r</m:ci></m:math> stays on forever, 
+                  then it's being serviced infinitely often.'':
+                <m:math><m:mrow><m:mo>□</m:mo>
+                  <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:ci>r</m:ci></m:mrow><m:mo>→</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:ci>s</m:ci></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow>
+                </m:mrow></m:math>.
+              
+            </item>
+<item>
+              <m:math><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:ci>r</m:ci></m:mrow></m:mrow><m:mo>→</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:ci>s</m:ci></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow></m:math>
+            </item>
+</list>
+</solution>
+</exercise>
+
+        <exercise id="producer-consumer-exercise">
+<problem id="idm9719632">
+            <para id="para65">
+              For our simple producer/consumer model, 
+              what is the basic property we'd like to guarantee?
+              Roughly, ``each product is consumed exactly once''.
+              That is, Produce and Consume are called alternatingly,
+              starting with Produce.
+              (In particular, as stated this precludes modeling
+               ``produce twice and queue the results''.)
+            </para>
+
+            <para id="para66">
+              Expressing this actually requires several clauses.
+              Give colloquial English translations of the following 
+              LTL formulas.
+              We can make the generic model a bit concrete by
+              interpreting
+              <m:math><m:ci>startProduce</m:ci></m:math> and <m:math><m:ci>finishProduce</m:ci></m:math> as
+              starting and finishing the production of a fine, hand-crafted
+              ale, with <m:math><m:ci>startConsume</m:ci></m:math>, <m:math><m:ci>finishConsume</m:ci></m:math>
+              corresponding to enjoying such an ale.
+              (The more health-concious reader might prefer
+               to instead interpret these as start/finish 
+               the training for a marathon,
+               and start/finish running a marathon, respectively.)
+            </para>
+          
+<list id="list19" list-type="enumerated">
+<item>
+              <m:math><m:mrow><m:mo>□</m:mo>
+                <m:mrow><m:mo>(</m:mo><m:ci>finishProduce</m:ci><m:mo>→</m:mo><m:mrow><m:mo>◇</m:mo><m:ci>startConsume</m:ci></m:mrow><m:mo>)</m:mo></m:mrow>
+              </m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:mo>□</m:mo>
+                <m:mrow><m:mo>(</m:mo><m:ci>finishProduce</m:ci><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>startProduce</m:ci></m:mrow><m:mo>U</m:mo><m:ci>finishConsume</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow>
+              </m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>startConsume</m:ci></m:mrow><m:mo>W</m:mo><m:ci>finishProduce</m:ci><m:mo>)</m:mo></m:mrow></m:math>
+            </item>
+<item>
+              <m:math><m:mrow><m:mo>□</m:mo>
+                <m:mrow><m:mo>(</m:mo><m:ci>finishConsume</m:ci><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>startConsume</m:ci></m:mrow><m:mo>W</m:mo><m:ci>finishProduce</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow>
+              </m:mrow></m:math>
+            </item>
+</list>
+</problem>
+
+<solution id="idm833248">
+<list id="list20" list-type="enumerated">
+<item>
+              
+                If an ale is produced, then an ale will
+                be consumed (possibly immediately).
+                Note that we don't talk about <emphasis>which</emphasis>
+                ale is consumed; in the following clauses we will try to
+                enforce that it really is the same ale that was recently
+                produced.
+              
+            </item>
+<item>
+              
+                If an ale is produced, then no ale-production
+                is started until after an ale has been consumed.
+              
+            </item>
+<item>
+              
+                No ale is consumed before (an initial)
+                ale is produced.  Note that 
+                a trace in which no ale is ever produced
+                still satisfies this formula.
+              
+            </item>
+<item>
+              
+                If an ale is consumed, nothing else will be consumed
+                until an(other) ale has been produced.
+              
+            </item>
+</list>
+</solution>
+</exercise>
+
+
+        <exercise id="exercise14">
+<problem id="idm8604912">
+            <para id="para67">
+              In the 
+              <link target-id="producer-consumer-exercise">previous exercise</link>,
+              the formulas entailed that production of an item could not
+              even begin
+              until the previous object had been <emphasis>entirely</emphasis>
+              consumed.
+              This requirement might make sense for 
+              the interpretation of marathon training/running, 
+              but it doesn't seem essential to the
+              production of hand-crafted ale, even if we do want to
+              preserve the policy of never queuing up products.
+            </para>
+
+            <para id="para68">
+              Suppose we have a computer network port whose
+              buffer can store only one web page's data at a time.
+              The producer could correspond to some server sending
+              a web page to that computer,
+              and the consumer might be a browser which processes the
+              data being received.
+            </para>
+          
+<list id="list21" list-type="enumerated">
+<item>
+              
+                Do we want to allow the producer to be producing
+                the next product before the consumer finishes the
+                current one?
+              
+            </item>
+<item>
+              
+                What change would you make to the formulas if you
+                <emphasis>did</emphasis> want to allow this 
+                produce-while-consuming behavior 
+                (as in the ale interpretation)?
+              
+            </item>
+</list>
+</problem>
+
+<solution id="idm1518656">
+<list id="list22" list-type="enumerated">
+<item>
+              
+                No.  That would mean the buffer is being overwritten with
+                a new web-page's data, even though the browser is still
+                trying to process the current page in the buffer.
+              
+            </item>
+<item>
+              
+                We would replace
+                <m:math><m:mrow><m:mo>□</m:mo>
+                  <m:mrow><m:mo>(</m:mo><m:ci>finishProduce</m:ci><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>startProduce</m:ci></m:mrow><m:mo>U</m:mo><m:ci>finishConsume</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow>
+                </m:mrow></m:math>
+                with
+                <m:math><m:mrow><m:mo>□</m:mo>
+                  <m:mrow><m:mo>(</m:mo><m:ci>finishProduce</m:ci><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>finishProduce</m:ci></m:mrow><m:mo>U</m:mo><m:ci>finishConsume</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow>
+                </m:mrow></m:math>.
+              
+            </item>
+</list>
+</solution>
+</exercise>
+
+        <para id="para69">
+          Note that we want to include the possibility that nothing
+          is ever produced — we don't <emphasis>always</emphasis>
+          want to enforce weak fairness.
+          Consider an operating system's code for a print server —
+          it is truly important
+          that not owning a printer doesn't mean the OS always crashes!
+        </para>
+
+        <para id="para70">
+          Through this section, we've seen some of the common patterns that
+          can arise in the formulas.
+          Following upon the idea of
+          <link url="http://en.wikipedia.org/wiki/Design_pattern_(computer_science)">Design Patterns</link>
+          as describing common
+          programming idioms,
+          ``Specification Patterns'' describe common
+          logic specification idioms.
+          For a list of LTL specification patterns, see
+          <link url="http://patterns.projects.cis.ksu.edu/documentation/patterns/ltl.shtml">Property Pattern Mappings for LTL</link>.
+        </para>
+
+        <para id="para71">
+          In addition, there are also
+          algebraic equivalences for LTL,
+          just as there are for 
+          <link document="m10717">propositional logic</link>.
+          We have already seen a 
+          <link target-id="a-DeMorgan-like-application-for-LTL">DeMorgan-like</link>
+          example; there are also less obvious equivalences, such as
+          distributing <m:math><m:mo>□</m:mo><m:mo>◇</m:mo></m:math> over <m:math><m:mo>∨</m:mo></m:math>:
+          <m:math><m:mrow><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:mrow><m:mo>(</m:mo><m:ci>φ</m:ci><m:mo>∨</m:mo><m:ci>ψ</m:ci><m:mo>)</m:mo></m:mrow></m:mrow></m:mrow><m:mo>≡</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:ci>φ</m:ci></m:mrow></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>□</m:mo><m:mrow><m:mo>◇</m:mo><m:ci>ψ</m:ci></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+          and the redundancy of <m:math><m:mo>□</m:mo></m:math>-over-<m:math><m:mo>∨</m:mo></m:math>:
+          <m:math><m:mrow><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:ci>φ</m:ci></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>□</m:mo><m:ci>ψ</m:ci></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>≡</m:mo><m:mrow><m:mo>□</m:mo>
+              <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo><m:ci>φ</m:ci></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>□</m:mo><m:ci>ψ</m:ci></m:mrow><m:mo>)</m:mo></m:mrow>
+            </m:mrow></m:mrow></m:math>
+          It can be fun to dabble in rewriting LTL formulas,
+          but (alas) we won't visit that topic further here.
+        </para>
+      </section>
+
+    <section id="temporal_spin">
+      <title>Using Temporal Logic in SPIN</title>
+      
+      <para id="para72">
+        So, we have a Promela program and an LTL formula to verify.  How do
+        we use the tool?  In SPIN, in the "Run" menu,
+        select "LTL Property Manager".
+        This opens a new window.  The top half contains several subparts
+        for entering an LTL formula, while the bottom half is for using it.
+      </para>
+
+      <para id="para73">
+        In the "Formula" textbox, you can type an LTL formula.  If you prefer,
+        you can enter the operators using the buttons below,
+        rather than typing.
+        Also, you can use the "Load" button to restore a previously-saved LTL
+        formula from a file.
+        For a formula, the next checkboxes allow you to either verify that
+        the formula always holds or never holds.
+        The "Notes" textbox is simply descriptive text.  If you plan on saving
+        the formula, it is helpful to remind yourself what this formula means
+        and is used for.
+        The "Symbol Definitions" textbox is where the LTL variables
+        (typically <code display="inline">p</code>,
+         <code display="inline">q</code>, <foreign>etc.</foreign>)
+        are related to the Promela code.
+        This is done through <code display="inline">#define</code>s
+        which are temporarily added to your Promela code.
+      </para>
+
+      <example id="critical2">
+        <para id="para74">
+          Let's consider another critical section example.  The following code
+          simply puts the critical section into a loop.  Also included is
+          our standard code to check that the mutual exclusion property is
+          satisfied, although the assertion is commented out.
+        
+          <code display="block" id="idp380496">
+ 1  /* Number of copies of the process to run. */
+ 2  #define NUM_PROCS 3
+ 3
+ 4  show bool locked = false;
+ 5  show int  num_crit = 0;
+ 6
+ 7  active[NUM_PROCS] proctype loop()
+ 8  {
+ 9    do
+10    :: true -&gt;
+11
+12       atomic {
+13         !locked -&gt;
+14         locked = true;
+15       }
+16            
+17       /* Critical section of code. */
+18       /* Something interesting would go here. */
+19            
+20       num_crit++;
+21       /* assert(num_crit == 1); */
+22       num_crit--;
+23            
+24       locked = false;
+25       /* End critical section of code. */
+26    od;
+27  }
+          </code>
+        </para>
+
+        <para id="para75">
+          Using temporal logic, we can accomplish the same check
+          without the assertion.
+          There are several similar ways of doing this.
+        </para>
+
+        <para id="para76">
+          One way is to verify that <code display="inline">num_crit</code>
+          always has the value 0 or 1.
+          To do this, we'll make the following definition
+          in xspin's ``Symbol Definitions'' textbox:
+
+          <code display="block" id="idp3904128">
+#define p ((num_crit == 0) || (num_crit == 1))
+          </code>
+
+          We then want to verify that <m:math><m:ci>p</m:ci></m:math> always holds, so our formula is
+          <code display="inline">[]p</code>
+          and mark that we always want this formula to hold.
+        </para>
+
+        <para id="para77">
+          To verify with this formula is a two-step process.  First, using
+          the "Generate" button generates what is known as a
+          <term>never claim</term>,
+          shown in the window.  This is more Promela code that is temporarily
+          added to your program.  This creates a special process that
+          checks the LTL formula and is
+          guaranteed to be executed after every normal step of your code.
+          You don't need to understand the generated never claim, although
+          SPIN presents it for advanced users.
+          The never claim uses a couple syntactic features of Promela
+          not covered in this module.
+          Next, using the "Run Verification" button opens a small version of
+          the verification options window that we're already familiar with.
+          Running the verification puts any output in the LTL window.
+        </para>
+
+        <note type="Using spin from the command-line" id="idm10825152"><label>Using spin from the command-line</label>
+          
+            To verify temporal formulas from the command-line, you
+            need to do three things:
+            First, generate a <code display="inline">never</code> claim using 
+            <code display="inline">spin -f <emphasis>formula</emphasis></code>.
+            For example,
+
+            <code display="block" id="idm1519936">
+prompt&gt;  spin -f '[] (p -&gt;  &lt;&gt; (q || !r))'
+            </code>
+
+            Be sure to quote the formula so the shell doesn't try to 
+            interpret special characters.
+            Next, take the output (which is Promela code for 
+            a <code display="inline">never</code> claim),
+            and paste it at the end of your Promela source file.
+            Also add <code display="inline">#define</code>s to the top of your file,
+            defining each propositional variable used in your LTL formula.
+            Finally, verify the resulting code.
+         
+        </note>
+      </example>
+
+      <example id="example10">
+        <para id="para78">
+          Generate and verify the code from the
+          <link target-id="critical2">previous example</link>.
+        </para>
+
+        <para id="para79">
+          The automatically-generated <code display="inline">never</code> claim is shown below.
+          It uses labels and
+          <code display="inline">goto</code>s which we haven't discussed,
+          but which will be familiar to many programmers.
+          (This code represents a small automaton, in this case with
+          two states, which gets incorporated into the larger
+          state space automaton that we've described.)
+          The use of the constant <code display="inline">1</code> here
+          is equivalent to the more mnemonic <code display="inline">true</code>.
+        </para>          
+
+        <code display="block" id="idm994896">
+never {    /* !([]p) */
+T0_init:
+        if
+        :: (! ((p))) -&gt; goto accept_all
+        :: (1) -&gt; goto T0_init
+        fi;
+accept_all
+        skip
+}
+        </code>
+
+        <para id="para80">
+          Running the verification, it does not report any errors.
+          However, note that verifying an LTL property automatically
+          turns off deadlock checking:
+          <code display="block" id="idm8801488">
+Full statespace search for:
+        …
+        invalid end states      - (disabled by never claim)
+          </code>
+          However, it still reports a
+          warning that the process never exits, in case we care:
+          <code display="block" id="idp3950512">
+unreached in proctype loop
+        line 27, "pan.___", state 11, "-end-"
+        (1 of 11 states)
+          </code>
+        </para>
+      </example>
+
+      <exercise id="exercise15">
+        <problem id="idp3952832">
+          <para id="para81">
+            We want to accomplish the same goal as the
+            <link target-id="critical2">previous example</link>,
+            but with a formula that should <emphasis>never</emphasis> hold.
+            What's an appropriate formula?
+          </para>
+        </problem>
+        
+        <solution id="idm90208">
+          <para id="para82">
+            Using the same definition of <code display="inline">p</code>,
+            we can simply use <code display="inline">&lt;&gt;!p</code>.
+            <foreign>I.e.</foreign>, we don't want it to ever happen
+            that <code display="inline">p</code> is false.
+          </para>
+        </solution>
+      </exercise>
+
+      <exercise id="exercise16">
+        <problem id="idm1369120">
+          <para id="para83">
+            Now let's verify something that can't be done easily with just
+            assertions.  We also want to make sure that
+            <code display="inline">num_crit</code>
+            continually alternates between the values of 0 and 1, rather than
+            maintaining the same value.  How can we do this?
+          </para>
+        </problem>
+        
+        <solution id="idm9069648">
+          <para id="para84">
+            Use the following symbol definitions:
+            
+            <code display="block" id="idm9067872">
+#define p (num_crit == 0)
+#define q (num_crit == 1)
+            </code>
+
+            and verify that
+            <code display="block" id="idm206560">
+([]&lt;&gt;p) &amp;&amp; ([]&lt;&gt;q)
+            </code>
+            
+            always holds.
+          </para>
+        </solution>
+      </exercise>
+
+      <exercise id="exercise.no-starvation">
+        <problem id="idm203888">
+          <para id="para85">
+            How could we use LTL to verify whether no process is starved?
+            Of course, this verification should fail, generating a trail
+            where at least one process is in fact starved.
+          </para>
+        </problem>
+
+        <solution id="idm2147184">
+          <para id="para86">
+            In essence, we want to verify
+
+            <code display="block" id="idm2145504">
+([]&lt;&gt;(_pid == 0)) &amp;&amp; ([]&lt;&gt;(_pid == 1)) &amp;&amp; ([]&lt;&gt;(_pid == 2))
+            </code>
+
+            The problem is that <code display="inline">_pid</code>
+            is a local variable to each        process,
+            but, unfortunately,
+            <code display="inline">never</code> claims are their own separate process,
+             and can't access those variables.
+            One solution is to create an equivalent global variable:
+
+            <code display="block" id="idp1596848">
+pid running;
+            </code>
+          </para>
+
+          <para id="para87">
+            Inside the critical section code add the line
+
+            <code display="block" id="idp338992">
+running = _pid;
+            </code>
+
+            Use the following symbol definitions:
+
+            <code display="block" id="idp340048">
+#define p (running == 0)
+#define q (running == 1)
+#define r (running == 2)
+            </code>
+
+            and verify whether
+
+            <code display="block" id="idp341264">
+([]&lt;&gt;p) &amp;&amp; ([]&lt;&gt;q) &amp;&amp; ([]&lt;&gt;r)
+            </code>
+
+            always holds.
+	  </para>
+
+          <note type="aside" id="idp342592">
+            The never claim's process will numbered higher than any
+            started by an <code display="inline">active proctype</code>.
+            So, in this case, its PID is 3.
+          </note>
+
+	  <para id="para88">
+            As expected, the verification fails, and a trail file
+            is created.  In the author's sample verification, this
+            trail has only processes 0 and 1 entering the critical
+            section, although there are many possible
+            counter-examples.
+	  </para>
+
+          <para id="para89">
+            It turns out, SPIN has a special syntax to express
+            whether a certain process is at a certain label.
+            So instead of defining a new variable,
+            we could alternately go to the critical section 
+            and add a new label (say ``<code display="inline">crit:</code>'')
+            and then define:
+            <code display="block" id="idp4164832">
+#define p (loop[0]@crit)   /* 0th 'loop' process is at crit. */
+#define q (loop[1]@crit)   /* 1st 'loop' process is at crit. */
+#define r (loop[2]@crit)   /* 2nd 'loop' process is at crit. */
+            </code>
+          </para>
+	</solution>
+      </exercise>
+
+    
+
+
+
+    </section>  
+
+
+
+
+</content>  
+</document>

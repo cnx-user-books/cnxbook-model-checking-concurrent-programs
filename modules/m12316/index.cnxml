@@ -1,0 +1,3254 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml">
+  <title>Modeling Concurrent Processes</title>
+  <metadata><md:content-id>undefined</md:content-id><md:title/><md:uuid>7b67f3ff-2aaf-4820-9a4f-6a370deb3a0d</md:uuid>
+</metadata>
+
+  <content>
+    <para id="para1">
+      We will model concurrency in two ways.
+      First, we will use Promela, a language with C-like syntax.
+      It is not a fully featured programming language, and is not intended
+      for general computation.  Instead, Promela
+      (“PROcess MEta-LAnguage”) programs are intended to
+      be simplifications or models of real-world systems, for use in
+      verification.  SPIN (“Simple Promela INterpreter”) is
+      the tool for executing and verifying programs written in Promela.
+      Second, we will use a simple state-based transition system that
+      will help in understanding the specification and verification of Promela
+      programs.
+    </para>
+
+    <para id="para2">
+      Here, we introduce Promela, SPIN, and the state-based
+      transition system through a series of examples.
+      For the moment, we will use SPIN merely as an interpreter, 
+      to run of Promela programs.
+      In the <link target-id="verification">next section</link>,
+      we will introduce the verification features
+      of SPIN.
+      (<link url="http://spinroot.com/spin/Man/index.html">Reference manuals</link>
+       and 
+       <link url="http://spinroot.com/spin/Man/README.html">download/install instructions</link>
+       are available via the SPIN homepage,
+       <link url="http://spinroot.com">spinroot.com</link>.)
+    </para>
+
+    <section id="section1">
+      <title>Promela and SPIN Basics</title>
+
+      <para id="para3">
+        We start with a series of examples illustrating race conditions.
+      </para>
+
+      <example id="tiny_first">
+        <title>A Tiny First Program</title>
+
+        <code display="block" id="idp1626752">
+ 1   /* A variable shared between all processes. */
+ 2   show int bal = 0;
+ 3
+ 4   active proctype deposit()
+ 5   {
+ 6     bal++;
+ 7   }
+ 8
+ 9   active proctype withdraw()
+10   {
+11     bal--;
+12   }
+        </code>
+
+        <para id="para4">
+          We have two threads, one running <code display="inline">deposit</code>
+          and one running <code display="inline">withdraw</code>.
+          The <code display="inline">proctype</code> keyword specifies
+          that the following is code for a thread/process, while the
+          <code display="inline">active</code> keyword specifies that
+          the thread is started immediately when we start the program.
+
+          Variables declared outside the body of a
+          <code display="inline">proctype</code> are shared.
+          The keyword <code display="inline">show</code> before a
+          variable declaration will direct
+          SPIN to display the value as it changes.
+        </para>
+
+        <para id="para5">
+          Here, the two processes of <code display="inline">deposit</code>
+          and <code display="inline">withdraw</code> can interleave
+          arbitrarily.  Regardless, with this very simple example,
+          we will always get the same result balance.
+        </para>
+      </example>
+
+      <para id="para6">
+        To run the code, we use SPIN.  We'll describe how to use the
+        program <code display="inline">xspin</code>, which uses
+        a graphical interface.
+        More specifically, these instructions are for UNIX version 4.1.3.
+        The PC and Mac versions are identical, except for how to start
+        the program.  For details, see the program's
+        <link url="http://spinroot.com/spin/Man/README.html">README</link>.
+        Ask your local system administrator where the program is installed
+        on your computer.
+      </para>
+
+      <note type="aside" id="idp535568">
+        
+          There is also a version based on the command-line, called
+          <code display="inline">spin</code>.
+          It is more difficult to use interactively, but is appropriate
+          for use non-interactive use, such as with scripts.
+          For its options, see the manual pages for
+          <link url="http://spinroot/spin/Man/Spin.html"><code display="inline">spin</code></link>
+          and the related
+          <link url="http://spinroot/spin/Man/Pan.html"><code display="inline">pan</code></link>.
+          <code display="inline">xspin</code> is just a graphical front-end to
+          <code display="inline">spin</code>.
+          The underlying <code display="inline">spin</code> commands and output
+          are displayed at
+          the bottom of the main <code display="inline">xspin</code> window.
+          These can be ignored.
+        
+      </note>
+
+      <note type="owlside" id="idm788112"><label>Owlside</label>
+        To run either <code display="inline">xspin</code> or
+        <code display="inline">spin</code>
+        from Rice University's Owlnet, first type
+        <code display="inline">setenv PATH /home/comp607/bin:$PATH</code>.
+      </note>
+
+      
+
+      <para id="para7">
+        Within SPIN, you'll work with a Promela program.
+        If you already have a Promela program saved, you can open it with
+        the "File" menu's "Open" option.
+        Alternatively, start SPIN with the Promela program's filename:
+        <code display="block" id="idm6378544">xspin <emphasis>filename</emphasis>.pml</code>
+        (The conventional suffix for Promela programs is <code display="inline">.pml</code>.)
+        Either of these loads the Promela code into an editor window,
+        where it can be modified.
+        To create a new program, you can type into this window, or you can
+        copy and past it from another editor.
+      </para>
+
+      <para id="para8">
+        After loading or typing a program, it's always a good idea to
+        check your typing.  In the "Run" menu, use "Run Syntax Check".
+        It will report and highlight the first syntax error, if any.
+      </para>
+ 
+      <para id="para9">
+        Before the first run, you need to specify some parameters, even if
+        those are the defaults.
+        From the "Run" menu, select the "Set Simulation Parameters" option.
+        Change the "Display Mode" defaults, by making sure that the
+        "MSC" and "Data Values" panels are each selected,
+        as well as each feature
+        under the "Data Values" panel.
+        Use the "Start" button to start the run.
+        This opens three new windows.
+        From the "Simulation Output" window, you can choose to single-step the
+        run or let it finish.  For now, choose "Run".
+        The body of this window displays each step taken.
+        Throughout the run, the "Data Values" window displays the values of
+        variables.  The "Message Sequence Chart" displays changes
+        to each process and variable.
+        Each column represents a separate process or variable, and the vertical
+        axis represents time.  For now, the only changes to processes are
+        when they stop.
+      </para>
+
+      <para id="para10">
+        Each process gets a unique process identifier number, starting with 0.
+        These are displayed in the output of the various windows.
+        <link target-id="_pid_use">Later</link>,
+        we will see how to access these IDs from within the Promela program.
+      </para>
+
+      <para id="para11">
+        For additional runs, 
+        from the "Run" menu of the main window, you can select
+        "(Re)Run Simulation".
+        However, each run will be identical, because it makes the same choices
+        for interleaving.  To vary runs, or <term>traces</term>,
+        change the "Seed Value" in the
+        simulation options.  Also, be sure to try the "Interactive" simulation
+        style, where you make each choice in the interleaving.
+      </para>
+
+      <note type="aside" id="idp881584">
+        Each <code display="inline">xspin</code> run opens several new windows,
+        without closing the old ones.
+        The easiest way to close the windows for a run is to use the "Cancel"
+        button in the "Simulation Output" window.
+      </note>
+
+      <note type="aside" id="idp1178352">
+        Experiment with the other display modes in the simulation options
+        to see what else is available.
+      </note>
+
+      <note type="Using spin from the command-line" id="idm6935216"><label>Using spin from the command-line</label>
+      Running a basic simulation is one of the few things which is
+      easier in <code display="inline">spin</code> than <code display="inline">xspin</code>, 
+      since you don't need to set
+      any of the simulation parameters:
+<code display="block" id="idm7147840">
+prompt&gt;  spin <emphasis>filename</emphasis>.pml
+</code>
+      </note>
+
+
+
+      <definition id="promela-state-definition">
+        <term>State</term>
+        <meaning id="idp2208944">
+          A snapshot of the entire program.
+          In Promela, this is an assignment to all the program's variables,
+          both global and local,
+          plus the program counter, or line number, of each process.
+          In other languages, the state also includes information such
+          as each process' stack contents.
+        </meaning>
+      </definition>
+
+      <definition id="promela-trace-definition">
+        <term>Trace</term>
+        <meaning id="idp7164128">
+          A sequence — possibly infinite — of successive states,
+          corresponding to one particular run of a program.
+        </meaning>
+        <seealso>
+          <term>state</term>
+        </seealso>
+      </definition>
+
+      <exercise id="exercise1">
+        <problem id="idp2794288">
+          <para id="para12">
+            How many traces are possible for the
+            <link target-id="tiny_first">previous example's code</link>?
+            Does each end with the same value for
+            <code display="inline">bal</code>?
+          </para>
+        </problem>
+ 
+        <solution id="idp526352">
+          <figure id="figure1">
+            <subfigure id="subfigure1">
+              <media id="idm6863952" alt=""><image src="../../media/tiny_first_trace1.png" mime-type="image/png"/></media>
+            </subfigure>
+
+            <subfigure id="subfigure2">
+              <media id="idp5892080" alt=""><image src="../../media/tiny_first_trace2.png" mime-type="image/png"/></media>
+            </subfigure>
+
+            <caption>
+              The two possible traces for the above program.
+            </caption>
+          </figure>
+
+          <para id="para13">
+            Did you see each one using SPIN?
+            Each trace ends with <code display="inline">bal</code>
+            equal to 0, as expected.
+          </para>
+
+          <para id="para14">
+            <note id="spin-differences" type="aside">
+              There are some minor differences between SPIN's behavior and
+              the somewhat simplified conceptual behavior that we are
+              describing;
+               
+              see the following list 
+            </note>
+               <list id="list1">
+                  <item>
+              SPIN adds an extra transition and state at the
+              end of each process.  You can think of the transition
+              as the process exiting,
+              but it doesn't change any of the variables' values.
+              We omit this, except for
+              <link document="m12940" target-id="verify-3state-crit">one homework exercise</link>.
+                  </item>
+                  <item>
+              Marking variables with <code display="inline">show</code>
+              introduces transitions and states to display their
+              changing values.  We have omitted these.
+                  </item>
+                  <item>
+              Finally, as a minor presentational detail,
+              SPIN doesn't report the start state of a trace like we do.
+                  </item>
+                  </list>
+          </para>
+        </solution>
+      </exercise>
+
+      <para id="para15">
+        All the traces of a Promela program start at the same
+        <term>initial state</term>.
+        Any variables not explicitly initialized by the code are
+        set to particular known values:
+        zero, for numbers; and false, for booleans.
+        (Compare to a C program, where two traces of the same program
+         might each start from a different state.)
+        And we've just seen that different traces may 
+        end in different states,
+        or they may sometimes end in the same state while
+        having taken different paths to reach that end state.
+        Finally, if we look closely at all the possible traces,
+        we see that 
+        often, several different traces might happen to pass through
+        the same intermediate state.
+        By combining the traces at these common states,
+        we can depict the entire <term>state space</term>
+        — a map of all the conceivable executions of our program!
+      </para>
+
+      <definition id="promela-state-space-definition">
+        <term>State space</term>
+        <meaning id="idp358592">
+          A directed graph with program states as nodes.
+          The edges represent program statements, since they transform one
+          state to another.
+          There is exactly one state, the <term>initial state</term>,
+          which represents the program state before execution begins.
+        </meaning>
+
+        <seealso>
+          <term>state</term>
+          <term>end state</term>
+          <term>valid end state</term>
+        </seealso>
+      </definition>
+
+      <definition id="definition4">
+        <term>Valid end state</term>
+        <meaning id="idp6301424">
+          (Informal)
+          Some states of our state space may be designated valid end states.
+          These represent points where all of the threads have completed
+          execution.
+        </meaning>
+
+        <seealso>
+          <term>deadlock</term>
+          <term>end state</term>
+        </seealso>
+      </definition>
+
+      <example id="tiny_first_statespace">
+        <figure id="figure2">
+          <media id="idp6705328" alt=""><image src="../../media/tiny_first_statespace.png" mime-type="image/png"/></media>
+          <caption>
+            An example state space.  The initial state is
+            indicated by an incoming arrow.  The
+            valid end state is indicated by a thicker border.
+          </caption>
+        </figure>
+
+        <para id="para16">
+          The above is the state space of the
+          <link target-id="tiny_first">Tiny First Program's code</link>.
+          The states are shown with the value of the only variable's value,
+          plus the program point of each process.
+          The edges are shown only as arrows, as the change in line numbers
+          indicates which statement's and thread's execution each represents.
+        </para>
+
+        <para id="para17">
+          The possible traces are then all the different paths in the
+          state space.
+          State spaces are primarily helpful for understanding how to
+          verify concurrent programs, and will be used mostly in
+          <link target-id="verification">the next section</link>.
+        </para>
+      </example>
+
+      <note type="aside" id="idp956640">
+        SPIN actually has two notions of states and state space.
+        One form describes a single process' information, while
+        the other describes the whole system.  The latter is 
+        what we have defined and illustrated.
+        The per-process form can be displayed in <code display="inline">xspin</code>
+        by the "Run" menu's option to
+        "View Spin Automaton for each Proctype".
+        Also, the state numbering of this per-process form is reported
+        by SPIN's output of traces.
+        There is a close relation between the two forms, as
+        the whole system is intuitively some sort of 
+        cross-product
+        of the individual processes.
+      </note>
+
+      <para id="para18">
+        We now modify the previous example.  The two
+        assignment statements have each been broken up into three
+        statements.  These three simulate a typical sequence of machine-level
+        instructions in a load/store style architecture.
+        This is a way to model that level of atomicity within Promela.
+      </para>
+
+      <example id="race-balance">
+        <title>A Race Condition</title>
+        <code display="block" id="idp3710560">
+ 1   /* A variable shared between all processes. */
+ 2   show int bal = 0;
+ 3        
+ 4   active proctype deposit()
+ 5   {
+ 6     show int new_bal;
+ 7
+ 8     new_bal = bal;
+ 9     new_bal++;
+10     bal = new_bal;
+11   }
+12
+13   active proctype withdraw()
+14   {
+15     show int new_bal;
+16
+17     new_bal = bal;
+18     new_bal--;
+19     bal = new_bal;
+20   }
+        </code>
+
+        <figure id="figure3">
+          <subfigure id="subfigure3">
+            <media id="idp5083984" alt=""><image src="../../media/balance1_trace_zero1.png" mime-type="image/png"/></media>
+          </subfigure>
+
+          <subfigure id="subfigure4">
+            <media id="idp3796848" alt=""><image src="../../media/balance1_trace_zero2.png" mime-type="image/png"/></media>
+          </subfigure>
+
+          <caption>
+            Two possible traces for the above program resulting in the
+            desired zero result.
+          </caption>
+        </figure>
+
+        <para id="para19">
+          Here, each process has its own local variable named
+          <code display="inline">new_bal</code>.
+          Note that we can also have SPIN
+          <code display="inline">show</code> local variables in the
+          "Message Sequence Chart" window.
+          Run this code as described in the previous example.
+        </para>
+      </example>
+
+      <exercise id="exercise2">
+        <problem id="idp3640576">
+          <para id="para20">
+            How many possible traces does this code allow?
+            (Try it in SPIN!)
+          </para>
+        </problem>
+
+        <solution id="idp3942336">
+          <para id="para21">
+            This code has 70 possible traces —
+            <emphasis>many</emphasis> more than the previous version.
+            Even with such a small
+            program, it is too cumbersome to try to list them all.
+            This is a fundamental reason why it is so hard for humans
+            to debug a concurrent program, since it involves understanding
+            all the possible ways threads can interact.
+            Once we start using SPIN as a verifier, letting it
+            enumerate these as a part of verification will be one
+            of the benefits of automation.
+            Later, we will
+            <link target-id="race-balance-verify">verify 
+            this specific example</link>.
+          </para>    
+        </solution>
+      </exercise>
+
+      <exercise id="exercise3">
+        <problem id="idm662784">
+          <para id="para22">
+            More importantly, what is the result of the computation,
+            <foreign>i.e.</foreign>, the
+            value of <code display="inline">bal</code> at the end?
+          </para>
+        </problem>
+
+        <solution id="idp6747248">
+          <para id="para23">
+            It can be 0, as expected, but it can also be 1 or -1!
+            These new possibilities are the result of traces such as the
+            following:
+
+            <figure id="figure4">
+              <subfigure id="subfigure5">
+                <media id="idp5446800" alt=""><image src="../../media/balance1_trace_one.png" mime-type="image/png"/></media>
+              </subfigure>
+
+              <subfigure id="subfigure6">
+                <media id="idp5494304" alt=""><image src="../../media/balance1_trace_negone.png" mime-type="image/png"/></media>
+              </subfigure>
+
+              <caption>
+                Two possible traces for the above program
+                resulting in undesired non-zero results.
+              </caption>
+            </figure>
+          </para>
+
+          <para id="para24">
+            In particular, after one process has updated and printed the
+            global variable, the other process can update it
+            <emphasis>based upon the original un-updated value</emphasis>.
+          </para>
+        </solution>
+      </exercise>
+
+      <exercise id="exercise4">
+        <problem id="idp2890144">
+          <para id="para25">
+            Each of the previous two exercises could be very easily 
+            answered, if you were given the program's state space.
+            Draw the state space.
+          </para>
+        </problem>
+
+        <solution id="idp1220096">
+          <figure id="figure5">
+            <media id="idp3480176" alt=""><image src="../../media/balance1_statespace.png" mime-type="image/png"/></media>
+            <caption>
+              State space for above program.
+              For brevity, the variable names are elided.
+              This leaves the information in the form of
+              the <code display="inline">deposit</code> and
+              <code display="inline">withdraw</code> line numbers
+              and the values of <code display="inline">bal</code>,
+              <code display="inline">deposit</code>'s
+              <code display="inline">new_bal</code>, and
+              <code display="inline">withdraw</code>'s
+              <code display="inline">new_bal</code>, respectively.
+            </caption>
+          </figure>
+
+          <para id="para26">
+            Whew!  See how much larger this is than
+            <link target-id="tiny_first_statespace">the state space of simpler version of this program</link>.
+          </para>
+        </solution>
+      </exercise>
+
+      <para id="para27">
+        Making the atomicity more fine-grained increases the possibility
+        of concurrency problems.  We will use this idea in many of the
+        examples in this module, because we want to ensure that we can
+        handle even the hard problems.  The particular code sequence used in
+        the previous example is also one of the shortest with a race condition.
+      </para>
+
+      <example id="race-balance-verify">
+        <title>A Race Condition Variation</title>
+        <para id="para28">
+          In Promela, initialization of a variable and assigning to a variable
+          have subtly different semantics.  
+          This is illustrated by this variation on the
+          <link target-id="race-balance">previous example</link>.
+        </para>
+
+        <code display="block" id="idp470032">
+ 1   /* A variable shared between all processes. */
+ 2   show int bal = 0;
+ 3
+ 4   active proctype deposit()
+ 5   {
+ 6     show int new_bal = bal;
+ 7  
+ 8     new_bal++;
+ 9     bal = new_bal;
+10   }
+11  
+12   active proctype withdraw()
+13   {
+14     show int new_bal = bal;
+15  
+16     new_bal--;
+17     bal = new_bal;
+18   }
+        </code>
+    
+        <para id="para29">
+          In Promela, initializing variables is part of starting a process.
+          Thus, all variables of all active processes are initialized
+          (defaulting to 0) before any other statements are executed.
+          Here, each copy of <code display="inline">new_bal</code> starts
+          with the value 0, so <code display="inline">bal</code> always
+          ends with either the value 1 or -1, but never 0.
+        </para>
+
+        <figure id="figure6">
+          <media id="idp1282416" alt=""><image src="../../media/balance2_statespace.png" mime-type="image/png"/></media>
+          <caption>
+            State space for above program with local variable
+            initializations.
+            For brevity, the variable names are elided.
+            This leaves the information in the form of
+            the <code display="inline">deposit</code> and
+            <code display="inline">withdraw</code> line numbers
+            and the values of <code display="inline">bal</code>, 
+            <code display="inline">deposit</code>'s
+            <code display="inline">new_bal</code>, and
+            <code display="inline">withdraw</code>'s
+            <code display="inline">new_bal</code>, respectively.
+          </caption>
+        </figure>
+      </example>
+  
+      <example id="generalized_race_condition">
+        <title>A Race Condition Generalized</title>
+      
+        <para id="para30">
+          The previous examples modeled two people simultaneously updating the
+          same bank account, one making a deposit, and one a withdrawal.
+          What if we had even more simultaneous updates?
+          Let's focus only on deposits, so each is doing the same action.
+          Rather than duplicating code with multiple
+          <code display="inline">proctype</code>'s (say,
+          <code display="inline">deposit1</code>,
+          <code display="inline">deposit2</code>, and
+          <code display="inline">deposit3</code>),
+          Promela allows us to
+          abstract that, as in the following:
+
+          <code display="block" id="idp1448048">
+ 1   /* Number of copies of the process to run. */
+ 2   #define NUM_PROCS 3
+ 3
+ 4   /* A variable shared between all processes. */
+ 5   show int z = 0;
+ 6
+ 7   active[NUM_PROCS] proctype increment()
+ 8   {
+ 9     show int new_z;
+10
+11     new_z = z;
+12     new_z++;
+13     z = new_z;
+14   }
+          </code>
+        </para>
+
+        <para id="para31">
+          We've abstracted the variables' names, but otherwise,
+          <code display="inline">increment</code> is the same as the
+          previous <code display="inline">deposit</code>.
+          The first substantial change is that we are starting three processes,
+          rather than two, each with a copy of the same code.
+          The bracket notation in the
+          <code display="inline">proctype</code> declaration indicates
+          how many copies of that code are to be used.
+          The number of copies must be given by a constant,
+          and it is good practice to name that constant as shown.
+        </para>
+
+        <para id="para32">
+          Although vastly simplified, this is also the core of our
+          <link document="m12312" target-id="airline_reservation">web-based flight reservation system example</link>.
+          The shared variable <code display="inline">z</code>
+          would represent the number of booked seats.
+        </para>
+      </example>
+
+      <exercise id="nondeterministic-not-random">
+        <problem id="idp6363904">
+         <para id="para33">
+            We can also ask questions like
+            “What is the probability that we end
+              with <code display="inline">z</code> having the value 3?”
+            How would you solve this?
+          </para>
+        </problem>
+
+        <solution id="idp2710752">
+          <para id="para34">
+            Divide the number of traces meeting this condition by the total 
+            number of conceivable traces.
+            <footnote id="idm6886272">If you're truly interested,
+              the code is simple and straightforward enough that 
+              it's not too hard to count these traces:
+              
+              <m:math>
+                <m:mrow>
+                  <m:reln>
+                  <m:eq/>
+                  <m:apply>
+                    <m:divide/>
+                    <m:apply>
+                      <m:factorial/>
+                      <m:cn>3</m:cn>
+                    </m:apply>
+                    <m:apply>
+                      <m:divide/>
+                      <m:apply>
+                        <m:factorial/>
+                        <m:cn>9</m:cn>
+                      </m:apply>
+                      <m:apply>
+                        <m:times/>
+                        <m:apply>
+                          <m:factorial/>
+                          <m:cn>3</m:cn>
+                        </m:apply>
+                        <m:apply>
+                          <m:factorial/>
+                          <m:cn>3</m:cn>
+                        </m:apply>
+                        <m:apply>
+                          <m:factorial/>
+                          <m:cn>3</m:cn>
+                        </m:apply>
+                      </m:apply>
+                    </m:apply>
+                  </m:apply>
+                  
+                  <m:apply>
+                    <m:divide/>
+                    <m:cn>6</m:cn>
+                    <m:cn>1680</m:cn>
+                  </m:apply>
+                  
+                  <m:apply>
+                    <m:divide/>
+                    <m:cn>1</m:cn>
+                    <m:cn>280</m:cn>
+                  </m:apply>
+                  </m:reln>
+                </m:mrow>
+              </m:math>.
+            </footnote>
+          </para>
+
+          <para id="para35">
+            However, this assumes that each possible trace is equally likely
+            — a dangerous assumption!
+	    In real life, with a particular operating system and hardware, some
+	    traces might be much more common than others.
+            For example, it might
+            be very unlikely (but possible) that two context switches would 
+            occur only a small
+	    number of instructions apart.  
+            So, a more realistic answer would be
+            based upon a statistical analysis of repeated runs.
+	  </para>
+
+          <para id="para36">
+            But an even more preferable answer
+            is to say that this is a trick question!
+            Rather than thinking of our concurrent system as being
+            probabilistic,
+            it is often better to stop short and merely call it
+            <term>non-deterministic</term>.
+            For example, if processes are distributed across the internet,
+            then which trace occurs might depend on network traffic, 
+            which in turn might depend on such vagaries as
+            the day's headlines,
+            or 
+            how many internet routers are experimenting with a new algorithm,
+            or 
+            whether somebody just stumbled over an ethernet cord somewhere.
+            In practice, we can't come up with any convincing distribution
+            on how jobs get scheduled.
+            Moreover, sometimes we want to cover adversarial schedules
+            (such as guarantees of how our web server protocol acts
+             during denial-of-service attack).
+          </para>
+        </solution>
+      </exercise>
+
+      
+    </section>
+
+    <section id="section2">
+      <title>Guarded Statements and Blocking</title>
+
+      <para id="para37">
+        <term>Guarded statements</term>
+        are one of the most basic elements of the Promela language.
+        As this section will introduce, they introduce the ability to
+        synchronize processes.
+        In <link target-id="control-flow">the next section</link>,
+        we see how they are also fundamental parts of the
+        looping (<code display="inline">do</code>) and
+        conditional (<code display="inline">if</code>) constructs.
+        <link target-id="process-interaction">After that</link>,
+        we will return to the synchronization issues, exploring them
+        in greater depth.
+      </para>
+
+      <definition id="definition5">
+        <term>Guarded statement</term>
+
+        <meaning id="idp3640272">
+          A guarded statement, written in Promela as
+          <code display="inline"><emphasis>guard</emphasis> -&gt; <emphasis>body</emphasis></code>,
+          consists of two parts.
+          The <term>guard</term> is a boolean expression.
+          The body is a statement.
+          Execution of the body will <term>block</term>,
+          or wait, doing nothing, until the guard becomes true.
+        </meaning>
+
+        <seealso>
+          <term>enabled</term>
+        </seealso>
+      </definition>
+
+      <example id="example6">
+        <title>Produce-One and Consume-One</title>
+
+        <code display="block" id="idp414320">
+ 1  bool ready = false;
+ 2  int  val;
+ 3
+ 4  active proctype produce_one()
+ 5  {
+ 6    /* Compute some information somehow. */
+ 7    val = 42;
+ 8
+ 9    ready = true;
+10
+11    /* Can do something else. */
+12    printf("produce_one done.\n");
+13  }
+14
+15  active proctype consume_one()
+16  {
+17    int v;
+18
+19    /* Wait until the information has been computed. */
+20    ready -&gt;
+21
+22    /* Now, we can use this. */
+23    v = val;
+24  }
+        </code>
+
+        <para id="para38">
+          This program leads to the following state space,
+          illustrating two important traits about Promela's guards.
+          First, the guarded statement of
+          <code display="inline">consume_one</code> will <term>block</term>
+          — sit and do nothing — until
+          its guard is satisfied.
+          This is seen by the behavior of the first three states in
+          the state space.
+          Second, execution of the guard is itself a transition to
+          a state.  This allows code, such as
+          <code display="inline">produce_one</code>'s
+          <code display="inline">printf</code> to be interleaved
+          between the guard and its body.
+          (The otherwise unnecessary <code display="inline">printf</code>
+           is there solely to make this point.)
+          When such interruptions between the guard and body are
+          undesired, they can be prevented, as
+          <link target-id="atomic">shown later</link>.
+        </para>
+
+        <figure id="figure7">
+           <media id="idm6492000" alt=""><image src="../../media/pcone_statespace.png" mime-type="image/png"/></media>
+
+           <caption>
+             State space for the above program.
+             The <code display="inline">consume_one</code> process
+             cannot make progress until <code display="inline">produce_one</code>
+             sets the <code display="inline">ready</code> variable.
+           </caption>
+        </figure>
+
+      </example>
+
+      <definition id="definition6">
+	<term>Enabled</term>
+	<meaning id="idp734336">
+	  A guarded statement is enabled if its guard evaluates to true.
+	</meaning>
+
+        <seealso>
+          <term>guarded statement</term>
+          <term>blocked</term>
+        </seealso>
+      </definition>
+
+      <note type="aside" id="idp3672768">
+        
+          The previous definition of “enabled” is a sufficient
+          simplification for our purposes.  But more accurately, in Promela,
+          <code display="inline">-&gt;</code> is just
+          alternate syntax for <code display="inline">;</code>, and
+          an expression is a valid statement by itself.
+          Thus, we more
+          properly define when each kind of Promela statement is enabled.
+          In particular, boolean expressions are enabled when they evaluate
+          to true, assignment statements are always enabled, and a compound
+          statement
+          <code display="block" id="idp6565184">
+<emphasis>stmt_1</emphasis> ;
+… ;
+<emphasis>stmt_n</emphasis>
+          </code>
+          is enabled if its first statement is.
+          One simplification that this allows is that trivially true guards
+          are unnecessary in Promela.
+          The statement
+          <code display="inline">true -&gt; <emphasis>stmt</emphasis></code>
+          is equivalent to the simpler
+          <code display="inline"><emphasis>stmt</emphasis></code>.
+        
+      </note>
+
+      <para id="para39">
+        <link target-id="process-interaction">Later</link> we will explore the possibility that
+        a process stays blocked forever, or equivalently,
+        never becomes enabled.
+      </para>
+    </section>
+
+
+    <section id="control-flow">
+      <title>Control Flow in Promela</title>
+
+      <para id="para40">
+	Of course, few interesting programs are made simply of
+	straight-line code.
+	We generally need to have more interesting control flow, including
+	conditionals and iteration.
+	These are illustrated in the remaining examples of this section.
+      </para>
+
+      <example id="random_walk1">
+	<title>Random Walk 1</title>
+
+	<para id="para41">
+	  The following code illustrates use of 
+          the <code display="inline">do</code> statement, the
+	  primary iteration statement.
+
+	  <code display="block" id="idp2360240">
+ 1   #define  STARTING_DISTANCE  2
+ 2   show int dist = STARTING_DISTANCE;
+ 3
+ 4   active proctype stumble()
+ 5   {
+ 6     do
+ 7     :: true -&gt; dist--;                        /* Approach. */
+ 8     :: true -&gt; dist++;                        /* Retreat.  */
+ 9     :: dist &lt;= 0 -&gt; break;                    /* Success!  */
+10     :: dist &gt;= STARTING_DISTANCE*2 -&gt; break;  /* Give up.  */
+11     od;
+12   }
+	  </code>
+	</para>
+
+	<para id="para42">
+	  This process consists solely of a loop from
+	  <code display="inline">do</code> to the matching
+	  <code display="inline">od</code>.
+	  The loop contains four guarded statements as alternatives,
+          each prefaced with double colons (<code display="inline">::</code>).
+	  On each iteration, all guards are evaluated.  From those evaluating
+	  to <code display="inline">true</code>,
+          only one is chosen arbitrarily, and its body executed.
+	  (What if none are true?
+	   <link target-id="random_walk2">We'll see soon</link>.)
+	</para>
+      </example>
+
+      <para id="para43">
+	Executing a <code display="inline">break</code> terminates the loop.
+	More generally, with nested loops,
+	it terminates the most tightly enclosing loop.
+      </para>
+
+      <para id="para44">
+        A loop in the control flow leads to cycles in the state space.
+
+        <figure id="figure8">
+          <media id="idp13536" alt=""><image src="../../media/random_walk1_statespace.png" mime-type="image/png"/></media>
+
+          <caption>
+            Random Walk 1 state space.
+          </caption>
+        </figure>
+
+        As usual, we have a state for each possible variable value.
+        There are a finite number of states, since the
+        <code display="inline">int</code> range is finite:
+        <m:math>
+          <m:apply><m:power/><m:cn>-2</m:cn><m:cn>31</m:cn></m:apply>
+        </m:math>
+        …
+        <m:math>
+          <m:apply>
+            <m:minus/>
+            <m:apply><m:power/><m:cn>2</m:cn><m:cn>31</m:cn></m:apply>
+            <m:cn>1</m:cn>
+          </m:apply>
+        </m:math>.
+      </para>
+
+      <note type="aside" id="idp2864624">
+        Since the large range of numbers is not needed for this
+        example, it would have been better to use the
+        <code display="inline">short</code> type, instead.
+        With a smaller range,
+        <m:math>
+          <m:apply><m:power/><m:cn>-2</m:cn><m:cn>15</m:cn></m:apply>
+        </m:math>
+        …
+        <m:math>
+          <m:apply>
+            <m:minus/>
+            <m:apply><m:power/><m:cn>2</m:cn><m:cn>15</m:cn></m:apply>
+            <m:cn>1</m:cn>
+          </m:apply>
+        </m:math>,
+        the state space would be significantly smaller,
+        and SPIN could reason about the program more quickly.
+      </note>
+
+      <exercise id="exercise6">
+	<problem id="idp2862384">
+	  <para id="para45">
+	    Run this code several times, observing the changing value of
+	    <code display="inline">dist</code>.
+	    As before, to see different behaviors, you'll need to change the
+	    "Seed Value" or use the "Interactive" simulation.
+	  </para>	
+	</problem>
+      </exercise>
+
+      <exercise id="exercise7">
+	<problem id="idp6758512">
+	  <para id="para46">
+	    Is it equivalent to change the inequalities
+            (<code display="inline">&lt;=</code> and <code display="inline">&gt;=</code>) to
+	    equalities (<code display="inline">==</code>) in this example?
+	    Why or why not?
+	  </para>
+	</problem>
+
+	<solution id="idp1906048">
+	  <para id="para47">
+	    No.  For example, the first clause could be chosen until
+	    <code display="inline">dist</code>
+	    was negative.  Unlike in the original code given, the 
+	    successful termination clause could not
+	    be chosen until <code display="inline">dist</code>
+	    is incremented to zero again.
+            Try it in SPIN, and look for such a trace.
+	  </para>
+	</solution>
+      </exercise>
+
+      <example id="random_walk2">
+	<title>Random Walk 2</title>
+
+	<para id="para48">
+	  The following code is a variation on the previous, illustrating
+	  the <code display="inline">if</code> statement and the
+	  <code display="inline">else</code> keyword.
+
+	  <code display="block" id="idm253056">
+ 1   #define  STARTING_DISTANCE  2
+ 2   show int dist = STARTING_DISTANCE;
+ 3
+ 4   active proctype stumble()
+ 5   {
+ 6     do
+ 7     :: (!(dist &lt;= 0) &amp;&amp;
+ 8         !(dist &gt;= STARTING_DISTANCE*2)) -&gt;
+ 9        if
+10        :: true -&gt; dist--;                  /* Approach. */ 
+11        :: true -&gt; dist++;                  /* Retreat.  */
+12        fi;
+13     :: else -&gt; break;
+14     od;
+15   }
+	  </code>
+	</para>
+
+	<para id="para49">
+	  First, consider the <code display="inline">do</code> loop.
+	  It has two guarded expressions,
+	  one with the guard <code display="inline">else</code>.
+	  On each iteration, if there are any
+	  enabled clauses, one is chosen arbitrarily, as before.
+	  But, if none are enabled the <code display="inline">else</code>
+	  clause, if any, is chosen.
+	  There may be only one <code display="inline">else</code> clause.
+	  An <code display="inline">else</code> clause is not the same
+	  as one with a <code display="inline">true</code> guard,
+	  as it can only be executed if no other clause is enabled.
+	</para>
+
+	<para id="para50">
+	  Here, this means that the first clause of the
+	  <code display="inline">do</code>, <foreign>i.e.</foreign>,
+	  the entire <code display="inline">if</code> statement,
+	  is used whenever the distance is within
+	  the specified range.  Otherwise, the loop is exited.
+	  Thus, unlike the
+	  <link target-id="random_walk1">previous example</link>,
+	  the loop is always
+	  exited once the distance is <code display="inline">0</code> or
+	  <code display="inline">STARTING_DISTANCE*2</code>.
+	</para>
+
+	<para id="para51">
+	  Inside this loop, we have an <code display="inline">if</code>
+	  statement, which itself has
+	  two clauses.  Like the <code display="inline">do</code>,
+	  it chooses arbitrarily among the
+	  enabled clauses, and may have an <code display="inline">else</code>
+	  clause.
+	</para>
+      </example>
+
+      <exercise id="exercise8">
+	<problem id="idp584176">
+	  <para id="para52">
+	    Run this code several times and observe its behavior.
+	  </para>
+	</problem>
+      </exercise>
+
+      <exercise id="exercise9">
+        <problem id="idm161744">
+          <para id="para53">
+            What is the state space for this code?
+          </para>
+        </problem>
+
+        <solution id="idp2814736">
+          <figure id="figure9">
+            <media id="idm7735264" alt=""><image src="../../media/random_walk2_statespace.png" mime-type="image/png"/></media>
+
+            <caption>Random Walk 2 state space.</caption>
+          </figure>
+
+          <para id="para54">
+            As desired, the program will always exit if
+            <code display="inline">dist</code> reaches either of its
+            limit values.
+          </para>
+        </solution>
+      </exercise>
+
+      <exercise id="exercise10">
+	<problem id="idm6305552">
+	  <para id="para55">
+	    Is it equivalent to change the <code display="inline">&lt;=</code>
+	    and <code display="inline">&gt;=</code> to
+	    <code display="inline">==</code> in this example?
+	    Why or why not?
+	  </para>
+	</problem>
+
+	<solution id="idm1104720">
+	  <para id="para56">
+	    Yes.  As mentioned, because of the
+	    <code display="inline">else</code> clause, the loop
+	    will terminate once the distance is out of range.  Since the
+	    distance is only ever changed by 1 on an iteration, it is
+	    sufficient to check just the boundary conditions of the range.
+	  </para>
+
+	  <para id="para57">
+	    While equivalent, it is probably a not good idea to make this
+	    change, since its correctness is dependent on other factors.
+	  </para>
+	</solution>
+      </exercise>
+
+      <exercise id="exercise11">
+	<problem id="idp4047376">
+	  <para id="para58">
+	    What is Promela's equivalent of the following
+	    C conditional statement?
+
+	    <code display="block" id="idp5025072">
+if (<emphasis>condition</emphasis>)
+   <emphasis>then_stmt</emphasis>;
+else
+   <emphasis>else_stmt</emphasis>;
+	    </code>
+	  </para>
+	</problem>
+
+	<solution id="idm7638240">
+	  <para id="para59">
+	    <code display="block" id="idm267504">
+if
+:: <emphasis>condition</emphasis> -&gt; <emphasis>then_stmt</emphasis>;
+:: else -&gt; <emphasis>else_stmt</emphasis>;
+fi;
+	    </code>
+	  </para>
+	</solution>
+      </exercise>
+
+      <exercise id="exercise12">
+	<problem id="idp244640">
+	  <para id="para60">
+	    What is Promela's equivalent of the following
+	    C loop statement?
+
+	    <code display="block" id="idp218320">
+while (<emphasis>condition</emphasis>)
+   <emphasis>body_stmt</emphasis>;
+	    </code>
+	  </para>
+	</problem>
+
+	<solution id="idm150160">
+	  <para id="para61">
+	    <code display="block" id="idm8275696">
+do
+:: <emphasis>condition</emphasis> -&gt; <emphasis>body_stmt</emphasis>;
+:: else -&gt; break;
+do;
+	    </code>
+	  </para>
+	</solution>
+      </exercise>
+
+      <para id="para62">
+	The previous examples illustrate what happens where there is a choice
+	among guarded statements and at least one is enabled.  What if none
+	are enabled?  In that case, that process is blocked, and it
+	halts execution until it is no longer blocked.
+      </para>
+
+      <exercise id="exercise13">
+        <problem id="idm296368">
+          <para id="para63">
+	    Create a Promela program illustrating synchronization and looping
+            in the following way.
+            One process counts down a global variable, until it
+            reaches zero.
+            Another process waits for the count to be zero to print
+            a message.
+	    Run your program in "Interactive" mode and confirm that the
+	    second process is blocked, and thus does nothing, until the count
+	    reaches zero.
+	  </para>
+        </problem>
+
+        <solution id="idp1043520">
+	  <code display="block" id="idp5959952">
+show int count = 5;
+
+active proctype count_down()
+{
+  do
+  :: count &gt; 0 -&gt; count--;
+  :: else -&gt; break;
+  od;
+}
+
+active proctype wait()
+{
+  count == 0 -&gt;
+  printf("I'm done waiting!\n");
+}
+	  </code>
+	</solution>
+      </exercise>
+    </section>
+
+
+    <section id="process-interaction">
+      <title>Process Interaction</title>
+
+      <para id="para64">
+        We have so far seen very simple interactions between processes,
+        using shared variables for communication and guarded statements
+        for synchronization.
+        This sections delves further into the possible interactions
+        and introduces some additional Promela syntax for that.
+      </para>
+
+      <para id="para65">
+	While blocking is an essential tool in designing concurrent programs,
+	since it allows process to synchronize, it also introduces the
+	possibility of deadlock, when all processes are blocked.
+        Since deadlock is a common problem in concurrent programs,
+        we will later see
+        <link target-id="deadlock_verification">how to verify whether a program can deadlock</link>.
+      </para>
+
+      <exercise id="small_deadlock">
+	<problem id="idp4356128">
+	  <para id="para66">
+	    Create a small Promela program that can deadlock.
+            The program need not do anything computationally interesting.
+            Run your program to see that it can get stuck.
+	  </para>
+	</problem>
+
+	<solution id="idp4153008">
+	  <para id="para67">
+	    There are many possible programs, but the following is a
+	    simple example.
+          </para>
+
+	  <code display="block" id="idp3173072">
+show int x = 1;
+
+active[2] proctype wait()
+{
+  x == 0 -&gt;
+  printf("How on earth did x become 0?!?\n");
+}
+	  </code>
+	</solution>
+      </exercise>
+
+      <para id="para68">
+	One standard concurrent programming technique that uses guarded
+	statements is <term>locking</term>.
+	While details of its use are beyond the
+	scope of this module, we'll provide a quick review.  Locks are
+	used when there is some resource or <term>critical section</term>
+	of code that we want
+	to control access to.  For example, only one process at a time
+	should be able to write data to a specific file, lest the file
+	get intermingled inconsistently.  To ensure this, the process
+	must <term>acquire</term> the lock associated with writing this file
+	before it can do the operation, and then must <term>release</term> it.
+      </para>
+
+      <example id="atomic">
+	<title>Locking to avoid race condition</title>
+
+	<para id="para69">
+	  We can modify the
+	  <link target-id="generalized_race_condition">Generalized Race Condition example</link>
+	  to eliminate its race condition.
+	  The lock controls access to the shared resource,
+	  <foreign>i.e.</foreign>, the shared
+	  variable <code display="inline">z</code>.
+
+	  <code display="block" id="idp2408112">
+ 1   /* Number of copies of the process to run. */
+ 2   #define NUM_PROCS 3
+ 3
+ 4   show int  z = 0;
+ 5   show bool locked = false;
+ 6
+ 7   active[NUM_PROCS] proctype increment()
+ 8   {
+ 9     show int new_z;
+10
+11     atomic {
+12       !locked -&gt;        /* Lock available? */
+13       locked = true;    /* Acquire lock.   */
+14     }
+15
+16     /* Critical section of code. */
+17     new_z = z;
+18     new_z++;
+19     z = new_z;
+20
+21     locked = false;     /* Release lock.   */
+22     /* End critical section of code. */
+23   }
+	  </code>
+	</para>
+      </example>
+
+      <para id="para70">
+	As described before, when using a lock, we need to acquire the
+	lock, execute the critical section, and release the lock.
+	Releasing the lock is the final action of the critical section,
+	as it allows another process to acquire the lock.
+	To acquire the lock, clearly we need to check whether it is available.
+	This guard is where each process potentially blocks, waiting for its
+	turn to get the block.
+      </para>
+
+      <para id="para71">
+	The <code display="inline">atomic</code> keyword,
+	as its name implies, makes a group of statements atomic.
+	Without it, two processes
+	could first each determine the lock was available, then each
+	acquire the lock, defeating the purpose of the lock.
+      </para>
+
+      <exercise id="exercise15">
+	<problem id="idp35216">
+	  <para id="para72">
+	    What values of <code display="inline">z</code>
+	    are possible at the end of this program?
+	  </para>
+	</problem>
+
+	<solution id="idp489728">
+	  <para id="para73">
+	    As desired, only the value 3, since there are 3 processes.
+	  </para>
+	</solution>
+      </exercise>
+
+      <exercise id="exercise16">
+	<problem id="idp4030576">
+	  <para id="para74">
+	    Run this code several times and observe its behavior.
+	    Also, eliminate the <code display="inline">atomic</code>
+	    keyword and its associated braces, and repeat.
+	  </para>
+	</problem>
+      </exercise>
+
+      <exercise id="exercise17">
+        <problem id="idp2435376">
+          <para id="para75">
+            Assume that the <code display="inline">atomic</code> keyword
+            is removed, and there are only two processes, instead of three.
+            Give a trace where both
+            are in the critical section at the same time.
+            What are the differences in the state spaces with and without
+            the <code display="inline">atomic</code>?
+          </para>
+        </problem>
+
+        <solution id="idp3591360">
+          <para id="para76">
+            The following figure shows one such trace.
+            Notice that <code display="inline">z</code>
+            is effectively incremented only once, instead of twice.
+          </para>
+
+          <figure id="figure10">
+            <media id="idp400496" alt=""><image src="../../media/increment1_race_trace.png" mime-type="image/png"/></media>
+
+            <caption>
+              An undesired possible trace for
+              <code display="inline">increment()</code>, if
+              <code display="inline">atomic</code> keyword were removed.
+              For brevity, states show the line number for each process,
+              the <code display="inline">z</code> and
+              <code display="inline">locked</code> values, and
+              each process' <code display="inline">new_z</code> value,
+              respectively.
+            </caption>
+          </figure>
+
+          <para id="para77">
+            The critical difference in state spaces is that
+            the <code display="inline">atomic</code> keyword prohibits
+            processes interleaving between the guard and its body.
+            This reduces the size of the state space.
+            In this case, as in many others, it also reduces the number
+            of different end states and, thus, possible result values.
+          </para>
+        </solution>
+      </exercise>
+
+      <example id="tiny_server_clients">
+	<title>Tiny Server and Clients</title>
+
+	<para id="para78">
+	  We now have the tools to demonstrate how a tiny server and its
+	  clients can be modeled.  The server process is a loop that repeatedly
+	  waits for and then processes requests.  Clients send requests.
+	  For simplicity, in this example, the server won't communicate
+	  any results back to the clients, and the clients will only make
+	  one request each.
+	</para>
+
+	<para id="para79">
+	  Servers generally allow multiple kinds of requests.  Here, we'll
+	  use one more new piece of Promela syntax,
+          <code display="inline">mtype</code>, to define some named
+	  constants, similar to an enumerated type.
+        </para>
+
+	<code display="block" id="idp5696160">
+/* Number of each type of client. */
+#define NUM_CLIENTS 1
+
+/* Define the named constants. */
+mtype = {NONE, REQUEST1, REQUEST2};
+
+/* Declare a shared variable.  */
+show mtype request = NONE;
+
+active proctype server()
+{
+  do
+  :: request == REQUEST1 -&gt;
+     printf("Processing request type 1.\n");
+     request = NONE;
+  :: request == REQUEST2 -&gt;
+     printf("Processing request type 2.\n");
+     request = NONE;
+  od;
+}
+
+active[NUM_CLIENTS] proctype client1()
+{
+  atomic{
+    request == NONE -&gt;
+    request = REQUEST1;
+  }
+}
+
+active[NUM_CLIENTS] proctype client2()
+{
+  atomic{
+    request == NONE -&gt;
+    request = REQUEST2;
+  }
+}
+	</code>
+      </example>
+
+      <para id="para80">
+	Function calls are another standard kind of control flow.
+	Surprisingly,
+          <emphasis>Promela does not have function calls</emphasis>!
+        Every <code display="inline">proctype</code> instance is a separate process.
+        Though if you really want, you could simulate a function call by 
+        <link url="http://www.spinroot.com/spin/Man/run.html">creating 
+        a new process dynamically</link>,
+        and blocking until that process returns.
+      </para>
+    </section>
+
+    
+
+    <section id="verification">
+      <title>Verification</title>
+
+      <para id="para81">
+	So far, we have determined the possible
+	behaviors of a program simply by running the program a
+	bunch of times.  For small programs, we can be very careful and
+	make sure we exhibit all the possible traces, but the state space
+	soon becomes unwieldy.
+      </para>
+
+      <para id="para82">
+	The real power of SPIN is as a tool for verification,
+	our original goal.
+	SPIN will <emphasis>search the entire state space for us</emphasis>,
+        looking for (reachable) states which fail to have desired properties. 
+      </para>
+
+      <section id="section6">
+	<title>Assertions</title>
+
+	<para id="para83">
+	  The first verification technique we'll examine are
+	  <term>assertion</term>s, common to many programming languages.
+	  In Promela, the statement
+	  <code display="inline">assert(<emphasis>condition</emphasis>);</code>
+	  evaluates the condition.  If the result is true, execution continues
+	  as usual.  Otherwise, the entire program
+	  is aborted and an error message is printed.
+	</para>
+
+	<para id="para84">
+	  When simulating a single run of the program, 
+          SPIN automatically checks these run-time assertions;
+          this is the usage that most programmers
+	  should be familiar with from traditional programming languages.
+	  But additionally, we'll see that SPIN,
+            in the course of searching the entire state space,
+          verifies whether an assertion can <emphasis>ever</emphasis> fail!
+          (Though of course it can only search finite, feasible state spaces;
+            happily, “feasible” can often include hundreds of
+            millions of states.)
+	</para>
+
+	<example id="race_lock">
+	  <para id="para85">
+	    Consider
+	    <link target-id="generalized_race_condition">our last race condition example</link>.
+	    One of our original naïve expectations was that,
+	    within each process,
+	    the value of <code display="inline">z</code> at the end
+	    of the process is exactly one more than at the beginning.
+	    The previous examples have shown that to be wrong, but we had to
+	    run the program until we encountered a run when it failed.
+	    Here, the <code display="inline">assert</code>
+	    statement puts that expectation explicitly
+	    into the program, for SPIN to check.
+
+	    <code display="block" id="idp322544">
+ 1   #define NUM_PROCS 3
+ 2
+ 3   show int z = 0;
+ 4
+ 5   active[NUM_PROCS] proctype increment()
+ 6   {
+ 7     show int new_z;
+ 8
+ 9     /* A saved copy of the old z, for the assertion. */
+10     show int old_z;
+11
+12     old_z = z;
+13     new_z = old_z + 1;
+14     z = new_z;
+15
+16     assert(z == old_z+1);
+17   }
+	    </code>
+	  </para>
+
+	  <para id="para86">
+	    It is often the case, as it is here, that to state the desired
+	    condition we need to add an extra variable —
+	    here, <code display="inline">old_z</code>.
+	    As always, it is important that when introducing such code for
+	    testing that you don't substantially change the code to be tested,
+	    lest you inadvertently introduce new bugs!
+	  </para>
+	</example>
+
+	<exercise id="exercise18">
+	  <problem id="idp3528336">
+	    <para id="para87">
+	      Run this code several times, and observe when the assertion
+	      fails.
+	      This text indicates which assertion failed, and the line will be
+	      highlighted in the code window.  To see which process' copy of
+	      <code display="inline">increment</code> failed and why,
+	      you have to look more closely at the steps shown.
+	      <code display="block" id="idm6429056">
+spin: line  16 "pan_in", Error: assertion violated
+spin: text of failed assertion: assert((z==(old_z+1)))
+              </code>
+	    </para>
+	  </problem>
+	</exercise>
+
+	<para id="para88">
+	  Certainly this run-time check is helpful,
+          but what about the promise of checking 
+	  whether an assertion <emphasis>can</emphasis> fail?
+          We will need to use SPIN as a <emphasis>verifier</emphasis>,
+           rather than just a <emphasis>simulator</emphasis>.
+	</para>
+
+	<para id="para89">
+	  As with simulation, before our first verification, we need to
+	  specify some parameters, even if only using the defaults.
+	  From the "Run" menu, select the "Set Verification Parameters"
+	  options.
+	  For this example, make sure that the "Assertions" option is marked.
+	  Use the "Run" button to start the verification.
+	</para>
+
+          <note type="Using spin from the command-line" id="idp4118448"><label>Using spin from the command-line</label>
+          Using <code display="inline">spin</code> by hand involves three steps:
+          we must first create a verifier (a C program) from our promela source;
+          then compile the verifier, and then run the verifier:
+<code display="block" id="idp314880">
+prompt&gt;  spin -a <emphasis>filename</emphasis>.pml
+prompt&gt;  gcc pan.c -o <emphasis>filename</emphasis>
+prompt&gt;  <emphasis>filename</emphasis>
+</code>
+         The <code display="inline">-a</code> flag tells SPIN to generate
+          a verifier, which it always names <code display="inline">pan.c</code>.
+          </note>
+
+	<para id="para90">
+	  As desired, the verification finds a problem, as reported in
+	  the "Verification Output" window.
+	  It also saves a description of the example run found where the
+	  assertion fails.
+
+	  <code display="block" id="idm8173152">
+pan: assertion violated (z==(old_z+1)) (at depth 11)
+pan: wrote pan_in.trail
+          </code>
+
+	  The remainder of this window's output is not too important, as it
+	  describes which verification options were used and how much work
+	  was done in the verification.
+	</para>
+
+	<note type="aside" id="idp64928">
+	  <code display="inline">pan</code> is the standard SPIN
+	  default name for files related to Promela verification.
+	  With <code display="inline">xspin</code>, you'll see these
+	  filenames reported, but you don't need to use or remember them.
+	</note>
+
+	<para id="para91">
+	  Now we can have SPIN show us the sample failed run it found.
+	  In the new "Suggested Action" window, select
+	  "Run Guided Simulation".  This brings up the now-familiar simulation
+	  windows, which will show this particular run.  This run is
+	  "guided" by a trace saved by the verification.
+	  (Alternatively, selecting "Setup Guided Simulation" allows you
+	  to change the display options first.)
+
+          <note type="Using spin from the command line" id="idp3787248"><label>Using spin from the command line</label>
+          Running a guided simulation from the command line 
+          is similar to running
+          a regular simulation, except you provide the <code display="inline">-t</code>
+          flag to have SPIN use the pre-named trail file. 
+          It's often handy to use the <code display="inline">-p</code> flag to
+          have SPIN print each line it executes:
+<code display="block" id="idp1740224">
+prompt&gt;  spin -t -p <emphasis>filename</emphasis>.pml
+</code>
+          </note>
+	</para>
+
+	<para id="para92">
+	  The trace found in our verification executed some of each
+          thread.
+	  From our experience with this program, we know there are
+	  less complicated traces where the assertion fails.  How can we
+	  find them?
+	</para>
+
+	<para id="para93">
+	  Again, in the "Run" menu, select "Set Verification Parameters".
+	  Now, select "Set Advanced Options", then
+	  "Find Shortest Trail", and "Set".
+	  Then run the verification again.
+	</para>
+
+	<code display="block" id="idp2318976">
+pan: assertion violated (z==(old_z+1)) (at depth 11)
+pan: wrote pan_in.trail
+pan: reducing search depth to 10
+pan: wrote pan_in.trail
+pan: reducing search depth to 5
+	</code>
+
+        <figure id="figure11">
+	  <subfigure id="subfigure7">
+	    <media id="idp848192" alt=""><image src="../../media/increment2_failed_trace_nonminimal.png" mime-type="image/png"/></media>
+	  </subfigure>
+
+	  <subfigure id="subfigure8">
+            
+	    <media id="idm7118560" alt=""><image src="../../media/increment2_failed_trace_minimal.png" mime-type="image/png"/></media>
+           </subfigure>
+
+          <caption>
+            A nonminimal and a minimal trace failing the assertion in
+            <link target-id="race_lock">previous example</link>.
+            For brevity, some variable names are omitted.
+            The second line shows the
+            <code display="inline">new_z</code> and
+            <code display="inline">old_z</code> for each process, respectively.
+            For the assertions, the relevant variables are underlined.
+          </caption>
+	</figure>
+
+	<note type="aside" id="idm6172608">
+	  Experiment on your own with the other advanced options under
+	  "Error Trapping".  Using breadth-first search is an alternate
+	  strategy to finding a shortest trace with an error.
+	</note>
+
+	<example id="example12">
+	  <para id="para94">
+	    <link target-id="race_lock">Previously</link>,
+	    we claimed that adding a lock fixed the race
+	    condition of the previous example.  Let's now verify that claim.
+	    The following is the locking version of the code augmented with
+	    the same assertion code just used.
+	    Note that the assertion needs to be inside the critical section.
+	    (Otherwise, process B could execute its critical section, changing
+	    <code display="inline">z</code>,
+	    in between process A's critical section and its assertion.)
+	  </para>
+
+	  <code display="block" id="idm6070032">
+/* Number of copies of process to run. */
+#define NUM_PROCS 3
+
+show int  z = 0;
+show bool locked = false;
+
+active[NUM_PROCS] proctype increment()
+{
+  show int new_z;
+
+  /* A saved copy of the old z, for the assertion. */
+  show int old_z;
+
+  atomic {
+    !locked -&gt;        /* Lock available? */
+    locked = true;    /* Acquire lock.   */
+  }
+
+  /* Critical section of code. */
+  old_z = z;
+  new_z = old_z + 1;
+  z = new_z;
+
+  assert(z == old_z+1);
+
+  locked = false;     /* Release lock.   */
+  /* End critical section of code. */
+}
+	  </code>
+	</example>
+
+	<exercise id="exercise19">
+	  <problem id="idp3186752">
+	    <para id="para95">
+	      Run the verification as before.
+	      As expected, no errors are found.
+	      Happily, this time no error messages are reported 
+              before the version information
+              in the "Verification Output" window,
+	      and SPIN doesn't suggest any guided simulation.
+	    </para>
+	  </problem>
+	</exercise>
+      </section>
+
+
+      <section id="deadlock_verification">
+	<title>Deadlock and End States</title>
+
+	<section id="section8">
+	  <title>Deadlock</title>
+
+	  <para id="para96">
+	    <link target-id="small_deadlock">A previous exercise</link>
+	    asked you to write a small deadlocking program,
+	    and provided one solution.
+	    Running such a program in SPIN's simulation
+	    mode, some execution paths result in deadlock,
+	    <foreign>i.e.</foreign>, every single process waiting 
+            on other processes to do something first.
+	    How can we verify whether or not deadlock is possible?
+	    SPIN checks for deadlock automatically,
+	    as one of a hand-full of built-in checks,
+	    so we will see how that is reported.
+	  </para>
+
+	  <para id="para97">
+	    Run SPIN's verifier on your tiny deadlocking program.
+	    The deadlock is reported by a somewhat obscure error message:
+
+	    <code display="block" id="idp2205872">
+pan: invalid end state (at depth 0)
+pan: wrote pan_in.trail
+	    </code>
+
+	    As usual, <code display="inline">xspin</code> allows
+	    you to easily run the guided simulation it found.
+	  </para>
+
+	  <para id="para98">
+	    Deadlock occurs in a state when nothing further will happen—that 
+	    is, there are no outgoing edges in the state space.
+	    We call this an <term>end state</term>.
+            Most programs we've seen previously have a valid end state:
+              all processes complete their last line.
+	    In contrast, in deadlock we are in an end state, yet at least
+            one process hasn't completed.
+            Hence “invalid”.
+	    SPIN checks for end states by
+            searching the entire state space (either by
+            a depth- or breadth-first search).
+	  </para>
+	</section>
+
+
+	<section id="valid_end_states">
+	  <title>Valid End States (optional)</title>
+
+	  <para id="para99">
+            We've mentioned that valid end states are those where
+              every process has completed its last line,
+            and that deadlock ends with at least one process which
+            hasn't completed.
+            However, that's not enough to conclude deadlock:
+            sometimes it is desirable to have a trace reach an end-state
+            with a process still (say) waiting for more input.
+
+            Consider a server and its clients.
+	    By default, the server waits and does nothing.  Only when a client
+	    makes a request, the server responds and does something.
+	    If all clients exit, it is expected, not an error,
+	    for the server to be blocked waiting for another request.
+	    In SPIN, we need to notate that it is valid for the server 
+            to end at that point, and not actually deadlock.
+	  </para>
+
+	    <para id="para100">
+	      If we run SPIN's verifier on the code for the
+	      <link target-id="tiny_server_clients">Tiny Server 
+                 and Clients example</link>,
+              we get a spurious “invalid end state” error,
+              since we <emphasis>expect</emphasis> 
+              the client to be alive and listening for
+              for any more requests.
+	    </para>
+	    
+	    <para id="para101">
+	      To let SPIN know that is acceptable and shouldn't actually
+              be considered deadlock, we label the beginning of
+	      the server loop as being a valid end state:
+	      We give it a label whose first three
+	      letters are “<code display="inline">end</code>”, as shown below.
+	      Run the verifier again on this, and there should
+              be no error message.
+            </para>
+
+            <para id="para102">
+	      <code display="block" id="idp2806832">
+ 1  /* Number of each type of client. */
+ 2  #define NUM_CLIENTS 1
+ 3
+ 4  /* Define the named constants. */
+ 5  mtype = {NONE, REQ1, REQ2};
+ 6
+ 7  /* Declare a shared variable.  */
+ 8  show mtype request = NONE;
+ 9
+10  active proctype server()
+11  {
+12   /* Waiting for a request is a valid place to end. */
+13   endwait:
+14    do
+15    :: request == REQ1 -&gt;
+16       printf("Processing request type 1.\n");
+17       request = NONE;
+18    :: request == REQ2 -&gt;
+19       printf("Processing request type 2.\n");
+20       request = NONE;
+21    od;
+22  }
+23
+24  active[NUM_CLIENTS] proctype client1()
+25  {
+26    atomic {
+27      request == NONE -&gt;
+28      request = REQ1;
+29    }
+30  }
+31
+32  active[NUM_CLIENTS] proctype client2()
+33  {
+34    atomic {
+35      request == NONE -&gt;
+36      request = REQ2;
+37    }
+38  }
+	      </code>
+	    </para>
+
+          <para id="para103">
+            More formally, what this does is to tag some of the states
+            in the state space as being valid, if they happen to
+            be an end-state.
+          </para>
+
+          <figure id="figure12">
+            <media id="idm6404640" alt=""><image src="../../media/server_statespace.png" mime-type="image/png"/></media>
+
+            <caption>
+              The state space for the above program.
+              The <code display="inline">endwait</code> label
+              makes the bottom two states be valid end states.
+            </caption>
+          </figure>
+
+          <para id="para104">
+	    Putting the <code display="inline">end</code> label in front of the entire
+            <code display="inline">do</code> statement may not seem as natural to you as:
+	    <code display="block" id="idp304928">
+do
+::
+ end1:
+  request == REQ1 -&gt;
+  …
+::
+ end2:
+  request == REQ2 -&gt;
+  …
+od;
+	    </code>
+	    However, this is <emphasis>not</emphasis> acceptable!
+	    Try it, by entering the changes and running a syntax check.
+	    The problem is that
+	    <code display="inline">end1</code> and
+	    <code display="inline">end2</code>
+	    both represent the same program point, where the program
+	    waits for some guard to become true.
+            It would be nonsensical to have (say) one of the two guards
+            labeled an end-state without the other one being an end-state.
+            To prevent surprising inconsistencies, Promela disallows
+            labels in front of individual guards of a compound statement.
+	  </para>
+
+	  <para id="para105">
+	    There are other syntactic restrictions of where labels can appear.
+	    The most commonly encountered is that they cannot appear
+            at the end of a statement block.  For example, instead of
+	    <code display="block" id="idm702528">
+{
+  x = 1;
+  y = 2;
+ label:   /* Label not allowed here. */
+}
+	    </code>
+	    you can introduce a dummy statement, and label it:
+	    <code display="block" id="idp3060624">
+{
+   x = 1;
+   y = 2;
+  label:
+   skip;  /* A statement that does nothing. */
+}
+	    </code>
+	  </para>
+	</section>
+      </section>
+
+
+      <section id="section10">
+        <title>Mutual Exclusion — a morality play (optional)</title>
+
+        <para id="para106">
+          It's worth showing several examples of correct and incorrect
+          concurrent
+          programs, and how SPIN can implement and attempt to verify them.
+          We'll examine a sequence of programs, all dealing with mutual
+          exclusion protocols.
+          We hope to leave the gentle reader with an appreciation of 
+          the non-obvious nature of concurrent bugs 
+          (and hence the value of automated verification).
+        </para>
+
+        <para id="para107">
+          To get started, we revisit the fundamental race condition,
+          phrased in terms of two processes simultaneously each being
+          in their critical section.
+          <code display="block" id="idp1852720"> 1  /* An INCORRECT attempt at Mutual exclusion.
+ 2   * Adapted from Ruys 2002: SPIN Beginner's Tutorial.
+ 3   */
+ 4  
+ 5  bool flag = false;  /* Is some process in its crit section? */
+ 6  int  data = 0;
+ 7  
+ 8  active[2] proctype proc()
+ 9  {
+10    do
+11    :: flag == false -&gt;  /* Wait until nobody in crit section. */
+12       flag = true;
+13  
+14       /* Entering critical section. */
+15       data++;
+16       assert(data == 1);
+17       data--;
+18       /* Leaving critical section. */
+19  
+20       flag = false;
+21    od;
+22  }</code>
+        </para>
+
+        <exercise id="exercise20">
+          <problem id="idp3017664">
+            <para id="para108">
+              Take a moment to run SPIN's verifier, and confirm that
+              the <code display="inline">assert</code> statement indeed might be violated.
+            </para>
+          </problem>
+        </exercise>
+
+        <para id="para109">
+          Here is another attempt which doesn't work.  
+          Can you see how it might go awry?
+          <code display="block" id="idm748720"> 1  /* An INCORRECT attempt at Mutual exclusion.
+ 2   * Version 2.
+ 3   * Adapted from Ruys 2002: SPIN Beginner's Tutorial.
+ 4   */
+ 5  
+ 6  bool flagA = false;  /* A wants to enter its crit section. */
+ 7  bool flagB = false;  /* B, similarly. */
+ 8  int  data = 0;
+ 9  
+10  active proctype A()
+11  {
+12    do
+13    :: flagA =  true;       /* Declare intent to enter crit section. */
+14       flagB == false -&gt;    /* Wait for B to leave their crit section, if in. */
+15        
+16       /* Entering critical section. */
+17       data++;
+18       assert(data == 1);
+19       data--;
+20       /* Leaving critical section. */
+21  
+22       flagA = false;
+23    od;
+24  }
+25  
+26  
+27  active proctype B()
+28  {
+29    do
+30    :: flagB =  true;       /* Declare intent to enter crit section. */
+31       flagA == false -&gt;    /* Wait for A to leave their crit section, if in. */
+32        
+33       /* Entering critical section. */
+34       data++;
+35       assert(data == 1);
+36       data--;
+37       /* Leaving critical section. */
+38  
+39       flagB = false;
+40    od;
+41  }</code>
+        </para>
+
+        <exercise id="exercise21">
+          <problem id="idm447888">
+            <para id="para110">
+              Again, use SPIN to verify that the assertion can be violated.
+              (Keep in mind that we can't use 
+               <code display="inline"><link target-id="atomic">atomic</link></code>
+               (or <code display="inline">d_step</code>)
+               here; the entire point of a mutex algorithm
+               is to be able to implement multi-statement atomicity
+               using nothing but shared memory 
+               and the atomicity of simple-assignment.)
+            </para>
+          </problem>
+        </exercise>
+  
+        <para id="para111">
+          By being substantially more clever though,
+          interacting flags can be used 
+          to get two processes to share a critical section:
+          <code display="block" id="idp7197968"> 1  /* A correct attempt at Mutual exclusion, huzzah!
+ 2   * Peterson, 1981.
+ 3   */
+ 4  
+ 5  bool flagA = false;  /* A wants to enter its crit section? */
+ 6  bool flagB = false;  /* B, similarly. */
+ 7  pid  turn;           /* For politeness, offer other people a turn. */
+ 8  int  data = 0;
+ 9  
+10  
+11  active proctype A()
+12  {
+13    do
+14    :: flagA = true;        /* Declare intent to enter crit section. */
+15       turn  = 1 - _pid;    /* Offer the turn to the other. */
+16  
+17       ((flagB == false) || (turn == _pid)) -&gt;
+18        
+19       /* Entering critical section. */
+20       data++;
+21       assert(data == 1);
+22       data--;
+23       /* Leaving critical section. */
+24  
+25       flagA = false;
+26    od;
+27  }
+28  
+29  active proctype B()
+30  {
+31    do
+32    :: flagB = true;        /* Declare intent to enter crit section. */
+33       turn  = 1 - _pid;    /* Offer the turn to the other. */
+34  
+35       ((flagA == false) || (turn == _pid)) -&gt;
+36        
+37       /* Entering critical section. */
+38       data++;
+39       assert(data == 1);
+40       data--;
+41       /* Leaving critical section. */
+42  
+43       flagB = false;
+44    od;
+45  }</code>
+          Processes <code display="inline">A</code> and <code display="inline">B</code> are using their
+          flags in symmetric ways, and we can certainly factor
+          their common code to get two instances of the same proctype:
+          <code display="block" id="idm852720"> 1  /* A correct attempt at Mutual exclusion, huzzah!
+ 2   * Peterson, 1981.
+ 3   */
+ 4  
+ 5  bool flag[2] = false;  /* Process #i wants to enter its crit. section? */
+ 6  pid  turn;             /* For politeness, offer other people a turn. */
+ 7  int  data = 0;
+ 8  
+ 9  active[2] proctype P()
+10  {
+11    pid me, peer;
+12  
+13    me   =     _pid;
+14    peer = 1 - _pid;
+15  
+16    do
+17    :: flag[me] = true;   /* Declare intent to enter crit section. */
+18       turn = peer;       /* Politely give others a chance, first. */
+19        
+20       ((flag[peer] == false) || (turn == me)) -&gt;
+21          
+22       /* Entering critical section. */
+23       data++;
+24       assert(data == 1);
+25       data--;
+26       /* Leaving critical section. */
+27  
+28       flag[me] = false;
+29    od;
+30  }</code>
+          A paper proof of this algorithm requires careful thought;
+          fortunately verifying this with SPIN is much easier.
+          Note that if you wanted to tweak an innocuous line or two 
+          of Peterson's algorithm, without SPIN you'd have to 
+          reason extremely carefully 
+          to be sure you didn't lose mutual exclusion.
+        </para>
+
+        <para id="para112">
+          A different algorithm for mutual exclusion, the Bakery algorithm,
+          can be thought of as having a roll of sequentially-numbered tickets;
+          when a process wants access to the critical section
+          (the bakery clerk),
+          they take a number, and then look around to be sure they have the
+          lowest ticket number of anybody, before striding up to the counter.
+          The tricky bit is that “taking a number” means both
+          copying the value of a global counter, and updating that counter,
+          in the presence of other processes who might be doing
+          so simultaneously.
+          It seems like it's begging the question, to even do that much!
+        </para>
+
+        <para id="para113">
+          Promela code for a two-process implementaton of the Bakery algorithm
+          is below; it can be generalized to <m:math><m:ci>n</m:ci></m:math> processes
+          <footnote id="idp8964336">
+            As the 
+            comments suggest, references to <code display="inline">ticket[peer]</code> must
+            be replaced by looping to find the maximum ticket-number among
+            all peers.  Moreover, it becomes possible for two processes to
+            grab the same ticket-number in this way.
+            This situation has to be checked for, and some way of breaking ties
+            included (<foreign>e.g.</foreign> smallest process ID number
+            (<code display="inline">_pid</code>) wins).
+          </footnote>
+          <code display="block" id="idm7096208"> 1  /* A correct attempt at Mutual exclusion.
+ 2   * Lamport's "Bakery algorithm"
+ 3   * Procs which communicate only through ticket[].
+ 4   */
+ 5  
+ 6  byte ticket[2];      /* `byte' ranges from 0..255.  Initialized to 0. */
+ 7  int  data = 0;
+ 8  
+ 9  active [2] proctype customer()
+10  {
+11    pid me   =   _pid;
+12    pid peer = 1-_pid;             /* Special case for 2 procs only. */
+13  
+14    skip;                          /* Doing some non-critical work... */
+15  
+16    ticket[me] = 1;                /* Declare desire to enter crit section. */
+17    ticket[me] = ticket[peer]+1;   /* In general: max(all-your-peers)+1.    */
+18    ((ticket[peer] == 0) || (ticket[me] &lt; ticket[peer])) -&gt;
+19  
+20    /* Entering critical section. */
+21    data++;
+22    assert(data == 1);
+23    data--;
+24    /* Leaving critical section. */
+25  
+26    ticket[me] = 0;                /* Relinquish our ticket-number. */
+27  }
+28  
+29  
+30  /* The meaning of ticket[], for each process:
+31   * ticket[me]==0 means I am not contending for crit section.
+32   * ticket[me]==1 means I am in the process of taking a ticket
+33   *               (I am looking at all other ticket holders)
+34   * ticket[me] &gt; 1 means I have received a ticket and will
+35   *              enter the critical section when my turn comes up.
+36   *
+37   * A problem still present, when trying to generalize to &gt; 2 procs:
+38   *   Two procs may choose the same ticket-number;  
+39   *   when nobody has a smaller ticket than you, check them all for equal tix;
+40   *   must break any ties reasonably (eg by smaller _pid).
+41   *
+42   * It's a bit sneaky, that 0 and 1 have special meanings
+43   *  (and the fact that 1 is less than any other "valid" ticket-number
+44   *  is important -- while anybody is calculating their ticket,
+45   *  nobody else will enter the critical section.
+46   *  This inefficiency can be avoided by being cleverer.)
+47   */</code>
+          SPIN can be used to verify this code.
+          But it is worth taking the time to reason through the code
+          <footnote id="idm669392">
+            Note that the particular value 
+            <code display="inline">ticket == 1</code> is 
+            important — it corresponds to
+            “I'm still calculating max of others”,
+            and doing so has priority
+            over anybody entering the process.
+          </footnote>
+          in your head, to compare your brain's horsepower with
+          SPIN's steam-engine technology.
+        </para>
+
+        <para id="para114">
+          You might have noticed that this example (unlike earlier ones)
+          only has each process perform their critical section once.
+          No problem, we can put that in a <code display="inline">do</code> loop:
+          <code display="block" id="idm430240"> 1  /* An overflow bug sneaks into our Mutual exclusion, uh-oh!
+ 2   * Lamport's "Bakery algorithm"
+ 3   * Procs which communicate only through ticket[].
+ 4   */
+ 5  
+ 6  byte ticket[2];
+ 7  int  data = 0;
+ 8  
+ 9  active [2] proctype customer()
+10  {
+11    pid me   =   _pid;
+12    pid peer = 1-_pid;
+13  
+14    do
+15    :: skip;                       /* Doing some non-critical work... */
+16  
+17       ticket[me] = 1;             /* Declare desire to enter crit section. */
+18       ticket[me] = ticket[peer]+1;
+19       ((ticket[peer] == 0) || (ticket[me] &lt; ticket[peer])) -&gt;
+20     
+21       /* Entering critical section. */
+22       data++;
+23       assert (data == 1);
+24       data--;
+25       /* Leaving critical section. */
+26  
+27       ticket[me] = 0;             /* Relinquish our ticket-number. */
+28    od;
+29  }</code>
+          SPIN verifies thi—wait a moment, the verification fails!
+          And at depth 2058, no less.
+          What's going on?
+          A clue can be found in scrutinizing the output:
+          <code display="block" id="idm7182640">
+spin: line  17 "mutexG2.pml", Error: value (256-&gt;0 (8)) truncated in assignment
+          </code>
+          Our variable <code display="inline">ticket</code>, a <code display="inline">byte</code>,
+          is overflowing!
+        </para>
+
+        <exercise id="exercise22">
+<problem id="idp1612384">
+<list id="list2" list-type="enumerated">
+<item>
+              
+                Describe one example trace, where 
+                <code display="inline">ticket</code> can keep incrementing until overflow.
+              
+            </item>
+<item>
+              
+                Does this overflow necessarily happen in every run?
+              
+            </item>
+<item>
+              
+                What is the probability that this overflow will occur?
+              
+            </item>
+<item>
+              
+                While changing the type of <code display="inline">ticket</code>
+                from <code display="inline">byte</code>
+                to <code display="inline">int</code> changes nothing conceptually,
+                it <emphasis>does</emphasis> change SPIN's verification.
+                Re-run the verification with this change.
+                What is the difference?
+              
+            </item>
+</list>
+</problem>
+
+<solution id="idm6481072">
+<list id="list3" list-type="enumerated">
+<item>
+              
+                Call the two processes P1 and P2.
+                P1 might get the first <code display="inline">ticket</code>=1 and enter
+                its critical section.  
+                While there, P2 takes <code display="inline">ticket</code>=2,
+                blocking until P1 is done.  
+                Then P2 enters its critical section, but before 
+		P2 finishes P1 again requests its critical section, 
+		taking <code display="inline">ticket</code>=3.
+                This process repeats—each process requesting
+                the critical
+                section (and bumping up the <code display="inline">ticket</code> number)
+                before its peer finishes.
+              
+            </item>
+<item>
+              
+                No.  If there is a moment when no processes are wanting the
+                critical section, then the <code display="inline">ticket</code> number
+ 		(intentionally) drops back to zero.
+              
+            </item>
+<item>
+              
+                This is a trick question (as we've mentioned
+                in <link target-id="nondeterministic-not-random">a
+		 previous problem's solution</link>):
+		For example,
+                road construction may fundamentally shift the rate of clients
+                in the bakery, 
+		or scheduling might even become adaptively adversarial
+                (perhaps:
+                 a grudge-holding customer trying to continually thwart
+                 another customer, by continually taking numbers just to 
+                 ask for a glass of water).
+              
+            </item>
+<item>
+              
+                SPIN runs out of state space before it detects the cycle.
+              ¶
+
+              
+                This justifies our initial use of <code display="inline">byte</code>:
+                there is no conceptual difference in the verification errors
+                between using <code display="inline">byte</code> and <code display="inline">int</code>,
+                but by keeping the state space from being extraneously large,
+                we get better insight to what the difficulty was.
+                (Imagine if we'd used <code display="inline">int</code> first — we might
+                 have seen the state-space error, presumed that other parts of
+                 our program made verification infeasible, crossed our fingers
+                 and given up.)
+              
+            </item>
+</list>
+</solution>
+</exercise>
+
+               
+
+        <para id="para115">
+          The moral of the story is that concurrent protocols can difficult and
+          subtle.  The
+          <link url="http://spinroot.com/spin/Doc/Book_extras/index.html">SPIN book</link> puts it well:
+          “The number of incorrect mutual exclusion algorithms that have 
+            been dreamt up over the years, often supported by long and
+            persuasive correctness arguments, is considerably larger than
+            the number of correct ones.  
+            [<link document="m12940" target-id="verify-3state-crit">One 
+             exercise</link>], 
+            for instance, shows
+            a version, converted into Promela, that was recommended by
+            a major computer manufacturer in the not too distant past.”
+        </para>
+
+        <para id="para116">
+          The following are some other ideas, each of these can form
+          the kernel of a successful mutex algorithm.
+          <list id="list4">
+            <item>
+              First-come, first-served.  Within Promela/SPIN,
+              we assume one
+              statement is executed at a time, so processes must
+              arrive at the critical section in some particular order.
+            </item>
+
+            <item>
+              Pre-determined priority order, <foreign>e.g.</foreign>,
+              by process ID.
+            </item>
+
+            <item>
+              Least recently used.
+              <foreign>I.e.</foreign>, processes defer to others that
+              haven't recently executed this code.
+            </item>
+
+            <item>
+              Random.  <foreign>E.g.</foreign>,
+              each process randomly chooses a number, with
+              ties broken randomly also.
+            </item>
+          </list>
+        </para>
+      </section>
+
+      <section id="section11">
+        <title>Issues in writing feasibly-verifiable programs (optional)</title>
+        <example id="example13">
+          <title>Banking</title>
+	
+          <para id="para117">
+            Our first Promela examples were drastically simplified models
+            of banking, with deposits and withdrawals.  Now, let's consider
+            a production-quality system of bank accounts.
+            Its code base could easily entail millions of lines of code.
+          </para>
+
+          <para id="para118">
+            Before we start porting the entire system to Promela, let's
+	    consider what it is we want to use SPIN to verify.
+            Ideally, we want to verify everything, including ensuring that
+            each account balance is correct.  But, think about
+            that in conjunction with SPIN's approach using state spaces.
+          </para>
+
+          <para id="para119">
+            Even with only one bank account, if we model balances accurately,
+	    we need an infinite number of states —
+	    one for each possible balance.
+	    Similarly, the production system likely has no bound
+            on the number of possible accounts.
+            SPIN would have a wee bit of difficulty searching the
+            entire state space in finite time.
+            To make verification feasible, all SPIN models are required
+            to be finite.  
+            (All data types, including <code display="inline">int</code>,
+             have a finite range.)
+	   </para>
+
+	  <para id="para120">
+            How could we restrict the Promela program to guarantee
+            finiteness?
+            The most obvious and least restrictive option is to simply use
+            the <code display="inline">int</code> type
+            and ensure that any examples used should not cause overflow.
+          </para>
+
+          <para id="para121">
+            To make verification efficient, the state space should be
+            relatively small.  Even using <code display="inline">int</code>s
+            as bank balances and
+            account numbers, assuming only 1000 lines of code and ignoring
+            any other program variables, we still have
+            <m:math><m:apply>
+              <m:times/>
+              <m:msup><m:cn>2</m:cn><m:cn>32</m:cn></m:msup> 
+              <m:msup><m:cn>2</m:cn><m:cn>32</m:cn></m:msup>
+              <m:cn>1000</m:cn>
+            </m:apply></m:math>
+            states — over 18 sextillion.
+            Even at a billion states per second, a
+            verification could still take over half a millenium!
+          </para>
+
+          <para id="para122">
+            Let's abandon the goal having our Promela prototype
+            track the particular balances accurately.
+            Since our focus is on concurrency, we mainly want to ensure that
+            when there are multiple simultaneous transactions, we don't lose
+            or mix up any of the data.  We might also want
+            to verify the security
+            protocols used in selecting appropriate accounts.
+            But, we no longer need to even keep track of balances.
+            Furthermore, it is highly unlikely that the production code
+            might have errors that <emphasis>only</emphasis> occur when 
+            there are a large number
+            of accounts, so we can comfortably use just a few.
+          </para>
+
+          <para id="para123">
+            Since we have not fully specified this example's original system,
+            we will leave the details to the reader's imagination.
+          </para>
+        </example>
+      </section>
+
+      <section id="section12">
+        <title>The lost Pathfinder (optional)</title>
+
+        <para id="para124">
+          In 1997, the
+          <link url="http://mpfwww.jpl.nasa.gov/default.html">Mars Pathfinder</link> seemed to beam its data back to Earth
+          just fine, except— sometimes it would appear to freeze up.
+          The “fix”?  Press Control-Alt-Delete from Earth,
+          and re-boot its rover
+          (incurring not only an expensive delay for Mission Control,
+           but the full attention of late-night-TV comedians).
+        </para>
+
+        <para id="para125">
+          The cause turned out to be a bug in the concurrency protocol,
+          between a low-priority data-gathering mode, which was meant
+          to yield to a high-priority data-sending mode.
+          However, sometimes these priorities would become inverted,
+          with the high-priority thread blocking on
+          the (supposedly) low-priority one.
+          <link url="http://www.time-rover.com/Priority.html">(More detail.)</link>
+          The bug
+          <footnote id="idm7195712">
+            This is of course not the full Sojourner Rover code,
+            but it is the concurrency-protocol skeleton.
+            The other thousands of lines of code would, of course, be omitted
+            from a Promela prototype.
+          </footnote>
+          can be realized in Promela:
+          <code display="block" id="idp6074896"> 1  /* From Spin primer/manual, Gerard Holzman. */
+ 2  
+ 3  mtype = { free, busy };             /* states for the variable "mutex" */
+ 4  mtype = { idle, waiting, running }  /* states for the processes */
+ 5  
+ 6  mtype highProc = idle;
+ 7  mtype  lowProc = idle;
+ 8  mtype mutex    = free;
+ 9  
+10  active proctype high_priority()
+11  {
+12   end:
+13    do
+14    :: highProc = waiting;
+15       atomic {
+16         mutex == free -&gt;
+17         mutex = busy
+18       };
+19       highProc = running;
+20       /* work work work; produce data */
+21       atomic {
+22         highProc = idle;
+23         mutex = free
+24       }
+25    od
+26  }
+27  
+28  active proctype low_priority() provided (highProc == idle)
+29  {
+30   end:
+31    do
+32    :: lowProc = waiting;
+33       atomic {
+34         mutex == free -&gt;
+35         mutex = busy
+36       };
+37       lowProc = running;
+38       /* work work work; consume data and send it back to Earth. */
+39       atomic {
+40         lowProc = idle;
+41         mutex = free
+42       }
+43    od
+44  }
+45  
+46  
+47  /* Note the "provided" clause as part of low_priority()'s declaration.
+48   * This condition is monitered and confirmed before every single
+49   * transition that low_priority() attempts.
+50   * (This is a handier syntax than placing that guard condition
+51   *  in front of every single statement within the process.)
+52   */</code>
+        </para>
+
+        <exercise id="exercise23">
+        <problem id="idp5410352">
+          <para id="para126">
+            Can you detect the problem using SPIN?
+          </para>
+        </problem>
+        </exercise>
+      </section>
+
+
+      <section id="non-progress">
+        <title>Non-progress: livelock, starvation, and fairness</title>
+
+        <section id="livelock_verification">
+          <title>Livelock</title>
+
+          <para id="para127">
+            As described
+            <link document="m12312" target-id="deadlock_livelock">previously</link>, livelock is very similar to deadlock.
+            But in livelock, computation doesn't get completely stuck —
+            it simply doesn't do anything sufficiently interesting.
+          </para>
+
+          <para id="_pid_use">
+            In previous examples, processes waited with a guarded statement.
+            Here, as an example of <term>busy waiting</term>,
+            we repeatedly check for the
+            desired condition, and otherwise do something.
+            Busy waiting for a condition that never comes true is one common
+            situation that leads to livelock.
+            <code display="block" id="idp7197376">
+ 1   show int x = 1;
+ 2
+ 3   active[2] proctype busywait()
+ 4   {
+ 5     do
+ 6     :: x != 0 -&gt;
+ 7        printf( "%d waiting.\n", _pid );
+ 8     :: else -&gt;
+ 9        break;
+10     od;
+11
+12     printf( "Now this is more interesting.\n" );
+13   }
+            </code>
+This example also uses <code display="inline">_pid</code>, a read-only variable
+whose value is the process ID number (0-based) of the given process.
+          </para>
+
+          <para id="para129">
+            Now we want to verify this code.
+            From the "Run" menu,
+            select "Set Verification Parameters"
+            and then turn on "Liveness" checking and "Non-Progress Cycles".
+            <note type="Using spin from the command-line" id="idp1490816"><label>Using spin from the command-line</label>
+            As usual, we use <code display="inline">-a</code> to have SPIN generate a verifier.
+            Then, when compiling <code display="inline">pan.c</code>, 
+            we must include a flag to check for non-progress, <code display="inline">-DNP</code>.
+            Finally, when running the resulting executable, we must also
+            specify loop-checking via the flag <code display="inline">-l</code>.
+<code display="block" id="idm6927232">
+prompt&gt;  spin -a <emphasis>filename</emphasis>.pml
+prompt&gt;  gcc -DNP pan.c -o <emphasis>filename</emphasis>
+prompt&gt;  <emphasis>filename</emphasis> -l
+</code>
+            (With all the varying flag names, 
+            you can begin to appreciate <code display="inline">xspin</code>'s interface!)
+            </note>
+            Verifying, SPIN now gives the following error message,
+            declaring it is possible for the code to not make progress:
+            <code display="block" id="idp6974432">
+pan: non-progress cycle (at depth 6)
+pan: wrote pan_in.trail
+            </code>
+          </para>
+
+          <para id="para130">
+            Now run the guided simulation.  In the "Simulation Output" window,
+            the start of the cycle is so labeled, and the end of the cycle
+            is the last step displayed.
+            Pictorially, the trace is as follows.
+          </para>
+
+          <figure id="figure13">
+            <media id="idp7000736" alt=""><image src="../../media/busywait_cycle.png" mime-type="image/png"/></media>
+            <caption>
+              Trace of a non-progress cycle.
+              Naturally, since it is a cycle, it repeats forever.
+            </caption>
+          </figure>
+        </section>
+
+
+        <section id="section15">
+          <title>Starvation</title>
+
+          <para id="para131">
+            Whereas livelock is when 
+            computation continues but no process makes actual progress, 
+            starvation is when 
+            computation continues, and some processes make progress 
+              but others don't.
+          </para>
+
+          <para id="starvation_example">
+            Consider the following code.
+            (Clearly, it does not compute anything interesting.)
+            <code display="block" id="idm6912144"> 1  show int x = 0;
+ 2   
+ 3  active proctype A()
+ 4  {
+ 5    do
+ 6    :: true -&gt; x = 1 - x;
+ 7    od
+ 8  }
+ 9  
+10  active proctype B()
+11  {
+12    do
+13    :: true -&gt; x = 1 - x;
+14    od
+15  }</code>
+	    Our naïve expectation and desire is
+	    that <code display="inline">A</code> and
+	    <code display="inline">B</code> each get executed infinitely often
+            (though not necessarily exactly alternating).
+	    The problem is that we could get unlucky — very
+            <footnote id="idp1759392">
+              Insert our usual 
+              <link target-id="nondeterministic-not-random">“nondeterministic, not random” caveat</link>
+              here.
+            </footnote> 
+            unlucky.
+	    It is possible for, say, <code display="inline">A</code>
+	    to get all the processor time,
+	    while <code display="inline">B</code> never even gets executed once, ever.
+	    More generally, maybe <code display="inline">B</code>
+	    gets its fair share of processor time for a while,
+            but later priority is always given to <code display="inline">A</code>,
+            and <code display="inline">B</code> never runs again.
+	  </para>
+
+	  <para id="para133">
+	    This is simply another instance of a lack of progress.
+	    For example, if we consider only <code display="inline">B</code>'s
+	    loop to be progress, then there is a non-progress cycle.
+	  </para>
+
+	  <exercise id="exercise24">
+	    <problem id="idm6863360">
+	      <para id="para134">
+		Modify the code to test for this non-progress cycle, and then
+		run SPIN's verifier.
+	      </para>
+	    </problem>
+
+	    <solution id="idp1616240">
+	      <para id="para135">
+		Since we are currently considering only
+		<code display="inline">B</code>'s loop to be progress,
+		we only add a progress label in <code display="inline">B</code>.
+
+		<code display="block" id="idm182384">
+ 1   show int x = 0;
+ 2 
+ 3   active proctype A()
+ 4   {
+ 5     do
+ 6     :: true -&gt; x = 1 - x;
+ 7     od
+ 8   }
+ 9
+10   active proctype B()
+11   {
+12    progress_B:
+13     do
+14     :: true -&gt; x = 1 - x;
+15     od
+16   }
+		</code>
+	      </para>
+
+	      <para id="para136">
+   	        Now we want to verify this code
+	        First, run a syntax check.  Partly, this is just another
+	        reminder of a good habit.  But, it also forces
+                <code display="inline">xspin</code> to re-scan your code and recognize
+	        the progress label.  After doing this,
+                re-run the verifier, and indeed it will find a non-progress 
+                cycle
+		The following are two of the possible traces it could find,
+		one minimal, and one not.
+              </para>
+
+              <figure id="figure14">
+                <subfigure id="subfigure9">
+                  <media id="idp1352624" alt=""><image src="../../media/ab_cycle_minimal.png" mime-type="image/png"/></media>
+                </subfigure>
+
+                <subfigure id="subfigure10">
+                  <media id="idp6799136" alt=""><image src="../../media/ab_cycle_nonminimal.png" mime-type="image/png"/></media>
+                </subfigure>
+
+                <caption>
+                  A minimal trace that only executes
+                  <code display="inline">A</code> and
+                  a nonminimal trace that
+                  executes <code display="inline">B</code> a little first.
+                  Progress states are depicted with red borders.
+                </caption>
+              </figure>
+
+              <para id="para137">
+                The next figure shows the entire state space, which has
+                a bit of a surprise.  Some of the states are duplicated,
+                differing <emphasis>only</emphasis>
+                in their status as progress states or not.
+                To see why that is necessary, contrast the following.
+                <emphasis>Entering</emphasis> line 14, as in the first
+                transition of the above nonminimal trace, entails progress.
+                This corresponds to each of the red progress states.
+                However, say that <code display="inline">B</code>
+                execute for one step, long enough to pass the guard, but
+                not yet execute the assignment.
+                Now, if only <code display="inline">A</code> executes,
+                <code display="inline">B</code> never makes further progress.
+                This corresponds to the black non-progress states with
+                <code display="inline">B</code>'s line counter at 14.
+              </para>
+
+              <figure id="figure15">
+                <media id="idm7684704" alt=""><image src="../../media/ab_statespace.png" mime-type="image/png"/></media>
+                <caption>State space for above program.</caption>
+              </figure>
+	    </solution>
+	  </exercise>
+
+	  <exercise id="exercise25">
+	    <problem id="idp3061840">
+	      <para id="para138">
+		How can we test for the possibility of
+		<code display="inline">A</code> looping forever
+		without executing <code display="inline">B</code>?
+	      </para>
+	    </problem>
+
+	    <solution id="idp4183152">
+	      <para id="para139">
+		Remove the progress label from <code display="inline">B</code>,
+		and add one to the
+		corresponding place within <code display="inline">A</code>.
+	      </para>
+             </solution>
+	  </exercise>
+
+	  <exercise id="exercise26">
+            <problem id="idp5651520">
+              <para id="para140">
+                Of course, the faulty behavior we'd really like 
+                to have SPIN alert us to is
+                “<code display="inline">A</code> <emphasis>or</emphasis> <code display="inline">B</code> 
+                  is being starved”,
+                instead of having to choose one and name it.
+              </para>
+              <para id="para141">
+                Why does putting <code display="inline">progress</code> labels in both
+                <code display="inline">A</code> <emphasis>and</emphasis> <code display="inline">B</code>
+                <emphasis>not</emphasis> achieve what we want?
+              </para>
+            </problem>
+
+            <solution id="idm6408928">
+              <para id="para142">
+                Putting in two progress labels, and getting a 
+                green light from SPIN's verifier, would only mean
+                “It is verified that in every trace,
+                  either <code display="inline">A</code> or <code display="inline">B</code>
+                  is making progress.”
+                But we want to confirm
+                “… <code display="inline">A</code>
+                  <emphasis>and</emphasis> 
+                  <code display="inline">B</code> are making progress.”
+              </para>
+            
+              <para id="para143">
+                In this toy example, 
+                where <code display="inline">A</code> and <code display="inline">B</code> are
+                identical (up to differing in progress labels),
+                we can argue by symmetry that 
+                lack of non-progress-for-<code display="inline">A</code> 
+                is enough to imply
+                lack of non-progress-for-<code display="inline">B</code>.
+                But in general, SPIN makes us run two separate
+                verifications (though we will see some possible 
+                <link document="m12317" target-id="exercise.temporal-logic-to-express-progress">code 
+                  contortions</link> later).
+              </para>    
+	    </solution>
+	  </exercise>
+	</section>
+
+
+	<section id="fairness_verification">
+	  <title>Fairness</title>
+
+	  <para id="para144">
+	    Process scheduling software is usually written so as to avoid
+	    starvation.  For example, a simple scheduler could simply pick
+	    processes in a round-robin fashion, executing some of each
+	    process 0, 1, 2, …, 0, 1, 2, … forever.
+	    However, this scheme inappropriately schedules time for blocked
+	    threads, doesn't allow the processes to be prioritized, and
+	    doesn't allow the set of running processes to change dynamically.
+	    Real schedulers manage not only the order, but also the frequency
+	    of context switches.
+	  </para>
+
+	  <para id="para145">
+	    So far, we have considered verification with an arbitrary
+	    scheduler.  Since we know nothing about the scheduler, we must
+	    consider all possible traces.  
+            (<link target-id="nondeteriministic-not-random">Remember</link> 
+             that the scheduler might sometimes be nature,
+              or even an adversary.)
+            But, SPIN also allows you to specify
+	    some more restricted scheduling behaviors, 
+            thus reducing the state space.
+	    We will look at one of these mechanisms in SPIN — enforcing
+	    “weak fairness”.
+	  <definition id="definition7">
+	    <term>Weak Fairness</term>
+	    <meaning id="idp5377744">
+	      Each statement that becomes enabled and remains enabled
+	      thereafter will eventually be scheduled.
+	    </meaning>
+	  </definition>
+	    (Weak fairness is but one of many notions of fairness.)
+	  </para>
+
+
+	  <example id="example14">
+	    <para id="para146">
+	      Let us return to our
+	      <link target-id="starvation_example">starvation example</link>,
+	      but this time we will have SPIN enforce weak fairness.
+	      To turn this feature on in <code display="inline">xspin</code>,
+	      select it from the verification options.
+              <note type="Using spin from the command-line" id="idp11068784"><label>Using spin from the command-line</label>
+                The steps for creating and compiling the verifier
+                are unchanged,
+                but we execute the verifier with a flag <code display="inline">-f</code> for 
+                fairness, as well as <code display="inline">-l</code> for loop-checking.
+<code display="block" id="idp5816240">
+prompt&gt;  spin -a <emphasis>filename</emphasis>.pml
+prompt&gt;  gcc -DNP pan.c -o <emphasis>filename</emphasis>
+prompt&gt;  <emphasis>filename</emphasis> -f -l
+</code>
+              </note>
+              <code display="block" id="idp1403040"> 1  show int x = 0;
+ 2   
+ 3  active proctype A()
+ 4  {
+ 5    do
+ 6    :: true -&gt; x = 1 - x;
+ 7    od
+ 8  }
+ 9  
+10  active proctype B()
+11  {
+12    do
+13    :: true -&gt; x = 1 - x;
+14    od
+15  }</code>
+            </para>
+
+            <para id="para147">
+	      In this code, each process is always enabled, since each guard is
+	      just <code display="inline">true</code>.  Thus, a weakly fair
+	      scheduler guarantees that	at each point in the trace,
+	      each process will eventually be scheduled
+	      in the future.  <foreign>I.e.</foreign>, it will
+	      repeatedly switch between the two processes as desired.
+	    </para>
+
+	    <exercise id="exercise27">
+	      <problem id="idp3757168">
+		<para id="para148">
+		  Now verify there are no non-progress cycles when weak
+		  fairness is guaranteed.  <foreign>I.e.</foreign>,
+		  add the progress label to <code display="inline">B</code>
+		  again and verify that no errors are reported.
+		  Repeat with the progress label in
+		  <code display="inline">A</code>.
+		</para>
+	      </problem>
+	    </exercise>
+	  </example>
+
+	  <example id="example15">
+	    <para id="para149">
+	      Weak fairness is defined not in terms of processes,
+	      but of individual statements.  This example illustrates
+	      how it applies to situations other than avoiding starvation,
+	      and in particular, when there is only one process.
+
+	      <code display="block" id="idp6665408">
+show int x = 0;
+
+active proctype loop()
+{
+  do
+  :: true -&gt; x = 1;
+  :: x==1 -&gt; x = 2;
+  :: x==2 -&gt; x = 3;
+  od;
+}
+	      </code>
+	    </para>
+
+	    <para id="para150">
+	      Without any kind of fairness enforced, it is possible to
+	      repeatedly execute only the first option.
+	    </para>
+	  </example>
+
+	  <exercise id="exercise28">
+	    <problem id="idp3933712">
+	      <para id="para151">
+		Verify the previous statement.
+	        Where would you add progress labels?
+	      </para>
+	    </problem>
+
+	    <solution id="idp2592608">
+	      <para id="para152">
+		We want a progress label within the second option.
+		Although that is not allowed before the guard, it is sufficient
+		for this example to add it after the guard.
+
+		<code display="block" id="idp7105600">
+active proctype loop()
+{
+  do
+  :: true -&gt; x = 1;
+  :: x==1 -&gt;
+     progress_2: x = 2;
+  :: x==2 -&gt;
+     progress_3: x = 3;
+  od;
+}
+		</code>
+	      </para>
+
+	      <para id="para153">
+		The <code display="inline">progress_3</code> label is unnecessary
+		since it would only be encountered after the second option
+		is executed.  However, it is arguably a good idea not to reason
+		through such arguments, and instead let the tool formally
+		do the reasoning.
+	      </para>
+
+	      <para id="para154">
+		After the first execution of the first option, the second one
+		is continously enabled, since <code display="inline">x==1</code>.
+		With weak fairness enforced, we are thus guaranteed that
+		<code display="inline">x</code> eventually becomes 2.
+	      </para>
+	    </solution>
+	  </exercise>
+
+	  <exercise id="exercise29">
+	    <problem id="idm300608">
+	      <para id="para155">
+		Now verify again with weak fairness enforced.
+	      </para>
+	    </problem>
+	  </exercise>
+
+	  <para id="para156">
+	    After <code display="inline">x</code> becomes 2,
+	    both the first and third options are enabled.
+	    Weak fairness is not sufficient to guarantee that the third will be
+	    ever be picked, as <code display="inline">x</code> could
+	    alternate between the values 1 and 2
+	    forever.  Since it wouldn't have the value 2 continuously, the weak
+	    fairness guarantee doesn't apply to the third option.
+	  </para>
+
+	  <exercise id="exercise30">
+	    <problem id="idm6078944">
+	      <para id="para157">
+		Verify this claim.  Where are progress labels needed now?
+	      </para>
+	    </problem>
+
+	    <solution id="idm6545760">
+	      <para id="para158">
+		Only the previous <code display="inline">progress_3</code>
+		label should be used.
+	      </para>	  
+	    </solution>
+	  </exercise>
+
+
+	  <note type="aside" id="idp1263104">
+	    <term>Strong fairness</term> states that if a statement
+	    is enabled infinitely often, it will eventually be executed.
+	    That would be sufficient to guarantee the third option is
+	    eventually chosen.  SPIN does not have a built-in switch
+	    for enforcing strong fairness.
+	  </note>
+	</section>
+
+        <section id="section.progress-surprising">
+          <title>Some Unexpected Progress (optional)</title>
+
+          <para id="para159">
+          Does the following code have a non-progress loop?
+            <code display="block" id="idp3656624"> 1  int x = 0;
+ 2  
+ 3  active proctype A()
+ 4  {
+ 5   progressA:
+ 6    /* Consider: A reaches this line, but never executes it. */
+ 7    x = 1;
+ 8  }
+ 9  
+10  active proctype B()
+11  {
+12    do
+13    :: x == 0 -&gt; skip;
+14    :: x == 1 -&gt; 
+15       progressB: skip;
+16    od;
+17  }</code>
+          </para>
+
+          <para id="para160">
+            It does if
+            <code display="inline">A</code> never runs, and <code display="inline">B</code> runs forever
+            with <code display="inline">x</code> being zero.
+            (Of course, this only happens if fairness is not being enforced.)
+            But surprisingly, 
+            <emphasis>
+              SPIN does not report any non-progress cycles!
+            </emphasis>
+            It views <code display="inline">A</code> as forever sitting in the 
+            state <code display="inline">progressA</code>, and thus feels that progress is
+            always happening (even though that statement is never executed).
+          </para>
+
+          <para id="para161">
+            This mismatch isn't due to the fact that 
+            SPIN associates labels with the state just 
+            <emphasis>before</emphasis>
+            executing the labeled statement;
+            even if they were associated with the statement preceding
+            the label,
+            we could still construct a situation
+            where SPIN views <code display="inline">A</code> as making progress even
+            though it is doing nothing at all (just idling
+            in a state tagged as a progress).
+          </para>
+
+          <para id="para162">
+            The fundamental mismatch is that to you and me, the idea
+            of “making progress” corresponds to 
+            <emphasis>making certain transitions</emphasis>.  
+            But SPIN views labels only as relating to states.
+            If there are transitions which don't correspond to progress,
+            yet arrive at a labeled-progress-state (in particular: self-loops,
+            possibly introduced for
+            <link target-id="definition-stutter-extend">stutter-extension</link>),
+            then the state-based and transition-based approaches differ.
+          </para>
+
+          <para id="para163">
+            We'll see in the next section a way to still
+            <link document="m12317" target-id="para.transition-based-progress-with-temporal-logic">capture
+            our transition-based notion with SPIN</link>.
+            Nevertheless, beware that sometimes a particular tool might
+            have some surprising notions.
+          </para>
+        </section>
+
+      </section>
+    </section>
+  </content>
+</document>

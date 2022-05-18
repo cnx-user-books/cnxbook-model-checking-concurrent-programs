@@ -1,0 +1,523 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml">
+  <title>Modeling Concurrent Processes: Homework Exercises</title>
+  <metadata><md:content-id>undefined</md:content-id><md:title/><md:uuid>1148257d-b1ba-4dec-844d-c0e968d644b4</md:uuid>
+</metadata>
+  <content>
+
+    <para id="para1">
+      The Dining Philosophers Problem is a standard example of concurrent
+      programming.  The idea is that a group of
+      <m:math><m:ci>n</m:ci></m:math>
+      philosophers sit at a single round table for dinner.
+      There are
+      <m:math><m:ci>n</m:ci></m:math>
+      forks, one placed between each plate.
+      To successfully eat each bite, a philosopher needs both of the
+      adjacent forks.  Thus, as one consequence, two adjacent philosophers
+      cannot eat at the same time, since they cannot both have the fork
+      inbetween them at the same time.  The question is what strategies
+      can the philosophers have such that, each philosopher eventually
+      eats.  Typically, but not necessarily, we also require that
+      each philosopher has the same strategy.
+    </para>
+
+    <exercise id="dp">
+<problem id="idp1155952">
+        <para id="para2">
+          To keep the problem small, let's assume
+          we have three philosophers.
+          As a slight simplication of some of the following problems,
+          we'll ignore maxims about code reuse, and choose to use
+          separate procedures for each philsopher's strategy.
+        </para>
+      
+<list id="list1" list-type="enumerated">
+<item>
+          
+            
+            Here is one attempted solution.
+            Repeatedly, each philosopher tries to pick up the left fork,
+            then tries to pick up the right fork, and then eats and drops
+            the forks.
+            A problem with this solution is that it has a race condition --
+            two philosophers can have the same fork at the same time.
+          
+
+          <list id="list2" list-type="enumerated">
+            <item>
+              Run this code in SPIN.
+              Provide some output from a sample run.
+            </item>
+            <item>
+              Add appropriate <code display="inline">assert</code>
+              statements to the code to test for a
+              race condition.  If necessary, you may add other code
+              to keep track of information to use in these assertions.
+            </item>
+            <item>
+              Use SPIN to find a shortest trace illustrating
+              a race condition.
+            </item>
+          </list>
+        </item>
+<item>
+          
+            
+            Here is another attempted solution.
+            It uses the same strategy, except that each fork has a lock.
+            A problem with this solution is that it can deadlock.
+          
+
+          <list id="list3" list-type="enumerated">
+            <item>
+              Use SPIN to show that the previous race conditions
+              cannot happen.
+            </item>
+            <item>
+              Use SPIN to find a shortest trace illustrating deadlock.
+            </item>
+            <item>
+              Recode this version so it uses multiple copies of only
+              a single <code display="inline">proctype</code>.
+            </item>
+          </list>
+        </item>
+<item>
+          
+            
+
+            Informally, deadlock is often viewed in the more restrictive
+            sense of deadlocking on the acquisition of locks.
+            This is equivalent to considering the case where the only
+            guard conditions are those testing boolean locks.
+            In this sense, deadlock can only happen where there are at least
+            two locks involved.  The following problems are instances of
+            two general strategies for avoiding this: using fewer locks
+            or being careful with locks.
+            In the following, code reuse will not matter --
+            you may write code using either a single or multiple
+            <code display="inline">proctype</code>s.
+          ¶
+
+          
+            One attempt is to only have a lock for only every other fork.
+            The idea is that each philosopher only needs to grab one lock.
+          
+
+          <list id="list4" list-type="enumerated">
+            <item>
+              Modify the code to do this with an even number of
+              philosophers and forks, say four of each.
+            </item>
+            <item>
+              Does this code have the race condition or deadlock?
+              Use SPIN to determine this.
+              If no, show SPIN's successful output.
+              If yes, find a shortest trace illustrating the problem.
+            </item>
+          </list>
+        </item>
+<item>
+          
+            A well-known solution is to number the forks somehow and ensure
+            that locks are always obtained in numerical order
+            (instead of always left-then-right).
+            Note: Maintain the provided lock-based code's lock convention of
+            first-acquired last-released.
+          
+
+          <list id="list5" list-type="enumerated">
+            <item>
+              Modify the code to do this.
+            </item>
+            <item>
+              Use SPIN to show that this does not have race conditions
+              or deadlock.
+            </item>
+            <item>
+              Use SPIN to determine whether using a
+              first-acquired first-released protocol has race conditions
+              or deadlock.
+            </item>
+          </list>
+        </item>
+<item>
+          
+            Assume that philosophers always try to pick up both forks,
+            eat, and then drop both forks, all philsophers use the
+            same strategy, but we have not chosen a particular strategy yet.
+            If we assume weak fairness is enforced and deadlock is avoided,
+            does each philosopher eat repeatedly?  What if we assume
+            strong fairness?
+          
+        </item>
+</list>
+</problem>
+
+<solution id="idp6280128">
+<list id="list6" list-type="enumerated">
+<item>
+          
+            You should add assertions to each philosopher,
+            immediately before or after the <code display="inline">printf</code>.
+            They assert that the two forks are being held by that
+            philosopher.
+          
+        </item>
+<item>
+          
+            The key to recoding is to use <code display="inline">_pid</code>,
+            so that each process (philosopher) knows its number.
+            Since process numbers start with 0, not 1, you can either
+            use <code display="inline">_pid+1</code>, or renumber the
+            philosophers 0…2.
+            Then, replace the <code display="inline">type="inline"&gt;mtype</code> with
+            a simple numerical encoding.
+            To compute the appropriate <code display="inline">right_fork</code>
+            value, use the modulo operator (<code display="inline">%</code>).
+          
+        </item>
+<item>
+          
+            If any fork lacks a lock, race conditions are possible.
+          
+        </item>
+<item>
+          
+            Using a FIFO acquisition and release protocol does not change
+            correctness.  With left-then-right acquisition, the problem
+            can still deadlock, while with a numerical acquisition,
+            it doesn't.  After all, the deadlock is a result of the
+            acquisition strategy, not the release strategy.
+          
+        </item>
+<item>
+          
+            Weak fairness is conditional on processes being
+            continuously enabled.
+            But here, when one philosopher grabs a fork, the
+            adjacent philosopher sharing that fork is no longer enabled.
+            So with three philosophers, one philosopher eating repeatedly
+            is weakly fair.  Similarly, with four philosophers, two of them
+            sitting opposite who are eating repeatedly is weakly fair.
+          ¶
+
+          
+            Strong fairness is conditional on processes being
+            enabled infinitely often.
+            It also does not imply that each philosopher
+            gets to eat.  For example, consider four philosophers
+            1…4 and four forks A…D.
+            After starting with
+            2 grabs A, 2 grabs B,
+            they can cycle through the following actions:
+            4 grabs C, 2 drops B, 4 grabs D, 2 drops A,
+            4 drops D, 2 grabs A, 4 drops C, 2 grabs B.
+            The other two philosophers are never enabled, and thus it is
+            strongly fair for them not to eat.
+          
+        </item>
+</list>
+</solution>
+</exercise>
+
+    <exercise id="exercise2">
+<problem id="idm1318560">
+        <para id="para3">
+          In the following, consider an arbitrary number of philosophers.
+          Three philosophers is only a special case.
+        </para>
+      
+<list id="list7" list-type="enumerated">
+<item>
+          
+            Assume we number the forks, and each philosopher picks up
+            forks in numerical order.
+            Because the table is round, this implies that if most
+            philosophers pick up the left fork first, that one will instead
+            pick up the right fork first.
+            This is a well-known strategy for avoiding deadlock.
+            Is that strategy weakly fair?  Strongly fair?
+          
+        </item>
+<item>
+          
+            Consider the strategy of acquiring forks in numerical order
+            and releasing them in the opposite order.
+            Compare its behavior in SPIN's simulation mode
+            with SPIN's built-in weak fairness enforcement turned
+            off vs. on.
+          
+        </item>
+</list>
+</problem>
+
+<solution id="idm8148256">
+<list id="list8" list-type="enumerated">
+<item>
+          
+            That particular strategy is neither weakly nor strongly fair,
+            in general.
+            (It is weakly fair when there are only 2 or 3 philosophers.)
+            For example, it allows for one philosopher to repeatedly
+            grabs and drop forks, while the others do nothing.
+          
+        </item>
+<item>
+        </item>
+</list>
+</solution>
+</exercise>
+
+    <exercise id="exercise3">
+      <problem id="idp65104">
+        <para id="para4">
+          The following is an example of the distinction between deadlock and
+          livelock.  Consider two people walking in a hallway towards
+          each other.
+          The hallway is wide enough for two people to pass.
+          Of interest is what happens when the two people meet in the hall.
+          When meeting on the same (left/right) side of the corridor,
+          a polite strategy is to step to the other side of the hallway.
+          A more belligerent strategy is to wait for the other person to move.
+          With two polite people there is the possibility of livelock, while
+          with two belligerent people there is the possibility of deadlock.
+          (As an aside, note that one polite and one belligerent person
+           together in a hall don't have any problems.)
+        </para>
+
+        <list id="list9" list-type="enumerated">
+          <item>
+            Model the livelock problem in Promela.
+            Use SPIN to demonstrate that your Promela program in fact models
+            the problem.
+          </item>
+          <item>
+            Model the deadlock problem in Promela.
+            Use SPIN to demonstrate that your Promela program in fact models
+            the problem.
+          </item>
+        </list>
+      </problem>
+
+      <solution id="idp2423008">
+        <para id="para5">
+          A key to modeling the problem is to abstract away the unnecessary
+          details.  In particular, there is no need to model the people
+          walking down the hall, as nothing interesting happens then.
+          Similarly, the hallway can be modeled as being only wide enough
+          for two people to pass.
+          By these restrictions, we reduce the data to only four possibilities:
+          each of the two people can be on either of two sides of the hall.
+          Keeping the state space small allows SPIN to solve more
+          problems, solve them faster, and report traces that are more
+          succinct and, thus, easier to understand.
+        </para>
+
+        <para id="para6">
+          The following is one of the many ways to code this.
+        </para>
+
+        <code display="block" id="idm6667136">
+/* Code assumes these two values add to two. */
+#define NUM_BELLIGERENT 2
+#define NUM_POLITE      0
+
+/* Indicates position of two people.
+ * Values: 0 or 1, for two sides of hall.
+ *         2 means unitilized.
+ */
+int position[2] = 2;
+
+active [NUM_BELLIGERENT] proctype belligerent()
+{
+  /* Non-deterministically set up starting position. */
+  if
+  :: true -&gt; position[_pid] = 0;
+  :: true -&gt; position[_pid] = 1;
+  fi;
+
+  /* Wait for other person to initialize. */
+  position[1 - _pid] != 2;
+
+  do
+  :: position[1 - _pid] == position[_pid] -&gt;
+     /* Wait for other person to move. */
+     skip;
+  :: else -&gt;
+     /* Success. */
+     break;
+  od;
+}
+
+active [NUM_POLITE] proctype polite()
+{
+  /* Non-deterministically set up starting position. */
+  if
+  :: true -&gt; position[_pid] = 0;
+  :: true -&gt; position[_pid] = 1;
+  fi;
+
+  /* Wait for other person to initialize. */
+  position[1 - _pid] != 2;
+
+  do
+  :: position[1 - _pid] == position[_pid] -&gt;
+     /* Move to other side. */
+     position[_pid] = 1 - position[_pid];
+  :: else -&gt;
+     /* Success. */
+     break;
+  od;
+}
+        </code>
+      </solution>
+    </exercise>
+
+    <exercise id="os">
+<problem id="idm6629504">
+        <para id="para7">
+          The process scheduler in an operating system is a typical example of
+          where we are concerned with fairness.  If we have multiple processes
+          running on a single processor, we break time into finitely-long
+          intervals during which we execute one of the processes.
+          We'd like to ensure that each process gets a ``fair''
+          share of the CPU time.
+        </para>
+
+        <para id="para8">
+          Your model should have an ``OS'' process
+          (the scheduler) and multiple ``user'' processes, using
+          
+          this framework.
+          The user processes are non-terminating — they always want
+          to get the CPU's next time slice.
+          <foreign>I.e.</foreign>, the user processes will be continually
+          enabled from the perspective of your own scheduler,
+          although not from that of SPIN.
+          But, we aren't modeling the user computation, those processes
+          just print a message.
+          Your scheduler, which is also non-terminating,
+          somehow picks among the processes which will execute.
+        </para>
+      
+<list id="list10" list-type="enumerated">
+<item>
+          <list id="list11" list-type="enumerated">
+            <item>
+              Write a scheduler which does not exhibit weak fairness.
+              <foreign>I.e.</foreign>, it is possible for one process
+              not to make progress.
+              However, do not write a trivial scheduler that simply
+              always picks one process and never the other.
+            </item>
+            <item>
+              Use SPIN to verify that your scheduler doesn't allow deadlock.
+            </item>
+            <item>
+              Use SPIN to demonstrate that your scheduler does not exhibit
+              weak fairness.
+            </item>
+          </list>
+        </item>
+<item>
+          <list id="list12" list-type="enumerated">
+            <item>
+              Write a scheduler which does exhibit weak fairness,
+              <foreign>i.e.</foreign>,
+              that each process is guaranteed to make progress.
+              Do not use SPIN's built-in weak fairness enforcement,
+              rather your scheduling algorithm must somehow enforce that
+              condition.
+            </item>
+            <item>
+              Consider if we added a progress label to the user
+              <code display="inline">proctype</code>,
+              inside its loop.
+              Why is this insufficient for SPIN to verify the weak fairness?
+            </item>
+            <item>
+              Describe how we could modify the program to verify the weak
+              fairness.  You do not need to implement this.
+              Use only the features of Promela/Spin we've covered so far.
+              (Soon, we'll introduce new features that allow a
+               simpler and better approach.)
+            </item>
+          </list>
+        </item>
+</list>
+</problem>
+
+<solution id="idp1282032">
+<list id="list13" list-type="enumerated">
+<item>
+          
+            The simplest such scheduler is one that non-deterministically
+            chooses which process is scheduled next.
+          
+        </item>
+<item>
+          
+            The simplest such scheduler just alternates between the
+            two processes.
+          ¶
+
+          
+            Adding a progress label to, say, only process A allows SPIN
+            to verify that A makes progress.  But that says nothing
+            about B making progress.
+            Adding a progress label to both A and B allows SPIN
+            to verify that <emphasis>at least one</emphasis> of A and B
+            makes progress, both not necessarily both.
+          ¶
+
+          
+            With what we've seen, here's two possible ways to use SPIN
+            to convince ourselves that the code is weakly fair.
+          
+          <list id="list14" list-type="bulleted">
+            <item>
+              
+                Add a progress label to only process A.  SPIN verifies that
+                A must gets turns.  Then add a progress label to only
+                process B.  SPIN verifies that B must get turns.
+                Thus, both A and B must get turns.
+              ¶
+
+              
+                Unfortunately, this requires two separate verifications.
+                Also, editing the code inbetween the verifications is
+                error-prone, as it is easy to forget to delete the first
+                progress label.
+              
+            </item>
+            <item>
+              
+                Add code, probably to the scheduler, that keeps track of
+                the scheduling choices.  Add logic and assertions to
+                check if this behavior is correct.
+              ¶
+
+              
+                It is easy to check, for example, that the processes
+                are indeed strictly alternated.  Or, more flexibly,
+                that after 100 scheduling choices, both processes were
+                scheduled at least once.  But, it is tricky to capture
+                the idea that each will eventually get scheduled.
+              ¶
+
+              
+                Adding substantial code for verification is always
+                undesirable because we must separately reason that this
+                additional code is correct and doesn't interfere with
+                the original behavior.
+              
+            </item>
+          </list>
+        </item>
+</list>
+</solution>
+</exercise>
+
+  </content>
+</document>

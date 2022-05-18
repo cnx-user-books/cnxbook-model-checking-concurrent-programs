@@ -1,0 +1,121 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:md="http://cnx.rice.edu/mdml">
+  <title>Concurrent Processes: Basic Issues: Homework Exercises</title>
+  <metadata><md:content-id>undefined</md:content-id><md:title/><md:uuid>01fc9b08-233c-4428-8bef-34dec6cb0558</md:uuid>
+</metadata>
+
+
+  <content>
+
+    <exercise id="exercise1">
+      <problem id="idp1732944">
+        <para id="para1">
+          Assume we have two concurrent threads/processes, each with
+          simple straight-line code and sharing a global variable
+          <code display="inline">x</code>.
+          Assume that each individual statement is atomic.
+        </para>
+
+        <code display="block" id="idp167168">
+ 1  thread0:
+ 2  {
+ 3    x=0
+ 4    x=x+1
+ 5  }
+
+ 6  thread1:
+ 7  {
+ 8    x=0
+ 9    x=x+1
+10    x=x+2
+11  }
+        </code>
+
+        <para id="para2">
+          Without using SPIN,
+          give one trace illustrating each of the possible final values
+          of <code display="inline">x</code>.
+        </para>
+      </problem>
+
+      <solution id="idp44080">
+        <para id="para3">
+          There are three possible final values of
+          <code display="inline">x</code>:
+          1, 3, 4.
+        </para>
+
+        <figure id="figure1">
+          <subfigure id="subfigure1">
+            <media id="idm6447376" alt=""><image src="../../media/homework134_trace1.png" mime-type="image/png"/></media>
+          </subfigure>
+
+          <subfigure id="subfigure2">
+            <media id="idm5745776" alt=""><image src="../../media/homework134_trace3.png" mime-type="image/png"/></media>
+          </subfigure>
+
+          <subfigure id="subfigure3">
+            <media id="idm6139440" alt=""><image src="../../media/homework134_trace4.png" mime-type="image/png"/></media>
+          </subfigure>
+
+          <caption>
+            For 1 and 3, the only trace for each is given.
+            For 4, there are many traces, with one sample given.
+          </caption>
+        </figure>
+      </solution>
+    </exercise>
+
+    
+
+    <exercise id="exercise2">
+      <problem id="idp1651088">
+        <para id="para4">
+          Answer the previous exercise, except with different atomicity.
+          Assume that each variable lookup, variable assignment, and
+          addition are atomic, as in a typical machine language.
+          Specifically, use the following code:
+          <code display="block" id="idp3442688">
+ 1  thread0:
+ 2  {
+ 3    x  =  0
+ 4    r0 =  x
+ 5    r0 += 1
+ 6    x  =  r0
+ 7  }
+
+ 8  thread1:
+ 9  {
+10    x  =  0
+11    r1 =  x
+12    r1 += 1
+13    x  =  r1
+14    r1 =  x
+15    r1 += 2
+16    x  =  r1
+17  }
+          </code>
+        </para>
+      </problem>
+
+      <solution id="idp1596128">
+        <para id="para5">
+          The values 1, 3, and 4 are possible as before.
+          It should be clear that values greater than 4 are impossible,
+          since at most a total of 4 can ever be added.
+          Similarly, values less than 1 are impossible, since at least
+          1 is added after the last variable lookup.
+          So, we're left with the question of whether 2 is a possible result.
+          It is, and one possible trace is given.
+        </para>
+
+        <figure id="figure2">
+          <media id="idm42720" alt=""><image src="../../media/homework134_trace2.png" mime-type="image/png"/></media>
+          <caption>A trace resulting in the value 2.</caption>
+        </figure>
+      </solution>
+    </exercise>
+
+
+  </content>
+  
+</document>

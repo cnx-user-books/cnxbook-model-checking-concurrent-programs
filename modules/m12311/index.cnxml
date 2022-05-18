@@ -1,0 +1,122 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:md="http://cnx.rice.edu/mdml">
+  <title>Concurrent Programming and Verification: Outline</title>
+  <metadata><md:content-id>undefined</md:content-id><md:title/><md:uuid>d77fc227-3d18-4f9c-8948-bd93b56af52f</md:uuid>
+</metadata>
+
+
+  <content>
+
+    <section id="section1">
+      <title>Verification of Concurrent Programs</title>
+
+      <para id="para1">
+	How can we know whether our programs have bugs?  
+        This is the pre-eminent question in software engineering today.
+	Test suites are important, but no
+	amount of tests can conclusively show a program to be bug-free.
+        In concurrent programs in particular, bugs can be difficult to find
+        and replicate through trial (and error).
+      </para>
+
+      <para id="para2">
+	Ideally we would <emphasis>prove</emphasis> that 
+	a program meets certain specs.
+        How to meet this goal routinely has been a
+        long-standing goal in computer science.
+	Historically, there have been significant difficulties in
+	making such proofs practical,
+        but verification technology is significantly improving.
+	In this module, we look at some of the issues involved —
+	how to describe, reason about, and verify properties —
+	specifically as applied to concurrency.
+      </para>
+  
+      <para id="para3">
+	We will look at two related ways to understand concurrent programs.
+	First, we write small programs in Promela, 
+        a language with a familiar C-like syntax,
+        but suited for concurrent programs.
+	We use Promela's partner tool, SPIN, to 
+        verify various properties our program's behavior.
+        Second, we introduce 
+	state-based <term>transition systems</term> —
+        an equivalent model for concurrent programs,
+        but one which is more suitable for reasoning about their behavior.
+      </para>
+
+      <para id="para4">
+	Together, Promela and SPIN are
+	designed to easily let us check for 
+        many common concurrency behaviors.
+	Historically, SPIN allowed only a collection of
+        special-purpose checks.
+	More generally, however, we can use <term>temporal logic</term> to
+	express our own properties for SPIN to check.
+	We will look at this special kind of logic 
+        and see how to apply it to verification.
+      </para>
+
+      <para id="para5">
+	This module is meant to be taught within the context of a
+        concurrent programming course, 
+	or an operating systems course covering the basics of
+	concurrent programming.
+	As such, this will not cover concurrent programming techniques.
+	However, we will quickly review the necessary background.
+      </para>
+
+      <list id="list1" list-type="bulleted">
+        <title>Outline</title>
+
+        <item>
+	  <link document="m12312">Basic issues</link> —
+          an optional review of the necessary background
+          (with
+           <link document="m12938">exercises</link>)
+        </item>
+
+        <item>
+	  <link document="m12316">Modeling</link> —
+          an overview of modeling and verifying concurrency,
+	  using Promela and transition systems
+          (with
+           <link document="m12939">exercises</link>)
+        </item>
+
+        <item>
+	  <link document="m12317">Temporal Logic</link> —
+          for specifying other concurrent behaviors
+          (with
+           <link document="m12940">exercises</link>)
+        </item>
+
+
+        <item>Other references:
+          
+          <list id="list2">
+            <item>
+            The <link url="http://www.spinroot.com">SPIN home page</link>
+            </item>
+            <item>
+            The 
+     <link url="http://www.spinroot.com/spin/Doc/Book_extras/index.html">SPIN 
+            book</link>.  
+            Several examples in our notes are inspired by this book.
+            </item>
+            <item>
+             <link url="http://spinroot.com/spin/Man/index.html">On-line 
+              manuals</link> for Promela and SPIN.
+            </item>
+            <item>
+             <link url="http://spinroot.com/spin/Man/README.html">Installing 
+              SPIN</link>
+            </item>
+	    <item><link url="http://stwww.weizmann.ac.il/G-CS/BENARI/jspin/index.html">jspin, SpinSpider: Tools for Teaching Concurrency with Spin</link>
+            </item>
+          </list>
+        </item>
+
+      </list>
+    </section>
+  </content>
+</document>

@@ -1,0 +1,891 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml">
+  <title>Using Temporal Logic to Specify Properties: Homework Exercises</title>
+  <metadata><md:content-id>undefined</md:content-id><md:title/><md:uuid>f9dba2d3-f74d-4ee3-9e96-7afa2bf1d963</md:uuid>
+</metadata>
+
+
+  <content>
+
+    <exercise id="exercise1">
+<problem id="idp9332384">
+        <para id="para1">
+          Give an English translation of the following LTL formulae.
+          Try to give a natural wording for each, not just a transliteration
+          of the logical operators.
+        </para>
+      
+<list id="list1" list-type="enumerated">
+<item>
+          
+            <m:math><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>◇</m:mo> <m:ci>r</m:ci> </m:mrow><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>U</m:mo><m:ci>r</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow></m:math>
+          
+        </item>
+<item>
+          
+            <m:math><m:mrow><m:mo>□</m:mo>
+              <m:mrow><m:mo>(</m:mo><m:ci>q</m:ci><m:mo>→</m:mo><m:mrow><m:mo>□</m:mo> <m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow> </m:mrow><m:mo>)</m:mo></m:mrow>
+            </m:mrow></m:math>
+          
+        </item>
+</list>
+</problem>
+
+<solution id="idp8762880">
+<list id="list2" list-type="enumerated">
+<item>
+          
+            ``<m:math><m:ci>p</m:ci></m:math> is true before <m:math><m:ci>r</m:ci></m:math>.''
+          
+        </item>
+<item>
+          
+            ``<m:math><m:ci>p</m:ci></m:math> is false after <m:math><m:ci>q</m:ci></m:math>.''
+          
+        </item>
+</list>
+</solution>
+</exercise>
+
+    <exercise id="exercise2">
+<problem id="idm702720">
+        <para id="para2">
+          In the following, give an LTL formula that formalizes
+          the given English wording.
+          If the English is subject to any ambiguity, as it frequently is,
+          describe how you are disambiguating it, and why.
+        </para>
+      
+<list id="list3" list-type="enumerated">
+<item>
+          
+            ``<m:math><m:ci>p</m:ci></m:math> is true.''
+          
+        </item>
+<item>
+          
+            ``<m:math><m:ci>p</m:ci></m:math> becomes true before <m:math><m:ci>r</m:ci></m:math>.''
+          
+        </item>
+<item>
+          <list id="list4" list-type="bulleted">
+            <item>
+              ``<m:math><m:ci>p</m:ci></m:math> will happen at most once.''
+            </item>
+            <item>
+              ``<m:math><m:ci>p</m:ci></m:math> will happen at most twice.''
+            </item>
+          </list>
+        </item>
+<item>
+          
+            ``The light always blinks.''
+            Use the following proposition:
+            <m:math><m:ci>p</m:ci></m:math> = the light is on.
+          
+        </item>
+<item>
+          
+            ``The lights of a traffic signal always light in the
+              following sequence: green, yellow, red, and back to green,
+              <foreign>etc.</foreign>,
+              with exactly one light on at any time.''
+          ¶
+
+          
+            Use the following propositions:
+            <m:math><m:ci>g</m:ci></m:math> = the green light is on,
+            <m:math><m:ci>y</m:ci></m:math> = the yellow light is on, and
+            <m:math><m:ci>r</m:ci></m:math> = the red light is on.
+          
+        </item>
+</list>
+</problem>
+
+<solution id="idm666464">
+<list id="list5" list-type="enumerated">
+<item>
+          
+            This looks so simple and obvious, right?
+            Unfortunately, it is ambiguous.
+            The simple answer, <m:math><m:ci>p</m:ci></m:math>, says it's true
+            <emphasis>right now</emphasis>.
+            But, the likelier intended meaning is that it's always true,
+            <m:math><m:mrow><m:mo>□</m:mo><m:ci>p</m:ci></m:mrow></m:math>.
+          
+        </item>
+<item>
+          
+            This can be reworded as
+            ``<m:math><m:ci>p</m:ci></m:math> becomes true while <m:math><m:ci>r</m:ci></m:math> is still false.''
+            <m:math><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>r</m:ci></m:mrow><m:mo>W</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>r</m:ci></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow></m:math>
+          
+        </item>
+<item>
+          
+            The version of LTL we use cannot capture the notion of
+            something being true for exactly one state.
+            Instead, we must instead think in terms of something
+            being true for ``a while''.
+            Using that idea, we'll reword the original English into
+            more explicit, long-winded forms.
+          ¶
+
+          
+            ``<m:math><m:ci>p</m:ci></m:math> will happen at most once''
+            becomes
+            ``<m:math><m:ci>p</m:ci></m:math> is false for a while, then
+              it may become true for a while, then
+              it may become false forever.''
+            It LTL, that can be written as
+            <m:math><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow><m:mo>W</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>W</m:mo><m:mrow><m:mo>□</m:mo> <m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow> </m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow></m:math>.
+          ¶
+
+          
+            Repeating that pattern,
+            ``<m:math><m:ci>p</m:ci></m:math> will happen at most twice''
+            becomes
+            <m:math><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow><m:mo>W</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>W</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow><m:mo>W</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>W</m:mo><m:mrow><m:mo>□</m:mo> <m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow> </m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow></m:math>.
+          
+        </item>
+<item>
+          
+            Here are three progressively simpler solutions which are
+            equivalent.
+          
+
+          
+
+          <list id="list6">
+            <item>
+              <m:math><m:mrow><m:mo>□</m:mo>
+                <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>→</m:mo><m:mrow><m:mo>◇</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow><m:mo>→</m:mo><m:mrow><m:mo>◇</m:mo><m:ci>p</m:ci></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow>
+              </m:mrow></m:math>
+            </item>
+
+            <item>
+              <m:math><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>U</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow><m:mo>)</m:mo></m:mrow> </m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>□</m:mo> <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow><m:mo>U</m:mo><m:ci>p</m:ci><m:mo>)</m:mo></m:mrow> </m:mrow><m:mo>)</m:mo></m:mrow></m:math>
+            </item>
+
+            <item>
+              <m:math><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo> <m:mrow><m:mo>◇</m:mo> <m:ci>p</m:ci> </m:mrow> </m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>□</m:mo> <m:mrow><m:mo>◇</m:mo> <m:mrow><m:mo>¬</m:mo><m:ci>p</m:ci></m:mrow> </m:mrow> </m:mrow><m:mo>)</m:mo></m:mrow></m:math>
+            </item>
+          </list>
+        </item>
+<item>
+          
+            There are many ways to write this, but here's one.
+            It states that whenever the green light is on,
+            no other light is on, and it will stay on until the
+            yellow one is on.
+            Note that this implies the red light won't come on
+            before the yellow one.
+            What happens when the other lights are on is entirely parallel.
+            Finally, at least one light is on.
+          ¶
+
+          
+            <m:math><m:mrow><m:mo>□</m:mo>
+              <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:ci>g</m:ci><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>y</m:ci></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>r</m:ci></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>(</m:mo><m:ci>g</m:ci><m:mo>U</m:mo><m:ci>y</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>(</m:mo><m:ci>y</m:ci><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>r</m:ci></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>g</m:ci></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>(</m:mo><m:ci>y</m:ci><m:mo>U</m:mo><m:ci>r</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>(</m:mo><m:ci>r</m:ci><m:mo>→</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>g</m:ci></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo><m:ci>y</m:ci></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>(</m:mo><m:ci>r</m:ci><m:mo>U</m:mo><m:ci>y</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>(</m:mo><m:ci>g</m:ci><m:mo>∨</m:mo><m:ci>y</m:ci><m:mo>∨</m:mo><m:ci>r</m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow>
+            </m:mrow></m:math>
+          
+        </item>
+</list>
+</solution>
+</exercise>
+
+    <exercise id="exercise3">
+<problem id="idp8747744">
+        <para id="para3">
+          Recall the
+          <link document="m12939" target-id="dp">Dining Philosophers Problem from the previous homework</link>.
+          Using temporal logic, formally specify the following desired
+          properties of solutions to the D.P. Problem.
+          Use the following logic variables, where
+          <m:math><m:mrow>
+            <m:mn>0</m:mn>
+            <m:mo>≤</m:mo>
+            <m:mi>i</m:mi>
+            <m:mo>&lt;</m:mo>
+            <m:mi>N</m:mi>
+          </m:mrow></m:math>:
+        </para>
+
+        <list id="list7">
+          <item>
+            <m:math><m:ci>
+              <m:msub>
+                <m:mi>l</m:mi>
+                <m:mi>i</m:mi>
+              </m:msub>
+            </m:ci></m:math>:
+            Philosopher <m:math><m:ci>i</m:ci></m:math> has his/her left fork.
+          </item>
+          <item>
+            <m:math><m:ci>
+              <m:msub>
+                <m:mi>r</m:mi>
+                <m:mi>i</m:mi>
+              </m:msub>
+            </m:ci></m:math>:
+            Philosopher <m:math><m:ci>i</m:ci></m:math> has his/her left fork.
+          </item>
+        </list>
+
+        <para id="para4">
+          For each question, your answer should cover exactly the given
+          condition -- nothing more or less.
+          You may assume
+          <m:math>
+            <m:apply>
+              <m:eq/>
+              <m:ci>N</m:ci>
+              <m:cn>3</m:cn>
+            </m:apply>
+          </m:math>.
+        </para>
+      
+<list id="list8" list-type="enumerated">
+<item>
+          
+            No fork is ever claimed to be held by
+            two philosophers simultaneously.
+          
+        </item>
+<item>
+          
+            Philosopher <m:math><m:ci>i</m:ci></m:math> gets to eat (at least once).
+          
+        </item>
+<item>
+          
+            Each philosopher gets to eat infinitely often.
+          
+        </item>
+<item>
+          
+            The philosophers don't deadlock.
+            (The main difficulty is to conceptualize and restate
+             ``deadlock''
+             within this specific model in terms of the available
+             logic variables.)
+          ¶
+
+          
+            You may assume philosophers pick up
+            two forks in some order, eat, and drop both forks.
+          
+        </item>
+<item>
+           
+             The philosophers don't deadlock.
+             (The main difficulty is to conceptualize and restate
+              ``deadlock''
+              within this specific model in terms of the available
+              logic variables.)
+          ¶
+
+          
+            You may not assume philosophers pick up
+            two forks in some order, eat, and drop both forks.
+            For example, one might pick up a single fork and then drop it.
+            Or, the philosophers might be lazy and never pick up a fork.
+          
+        </item>
+<item>
+          
+            Describe a D.P. Problem run in which philosophers don't
+            deadlock, but it is not the case that each philosopher gets
+            to eat infinitely often.
+          
+        </item>
+</list>
+</problem>
+
+<solution id="idp7208016">
+<list id="list9" list-type="enumerated">
+<item>
+          
+            <m:math><m:mrow><m:mo>□</m:mo>
+              <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo>
+                  <m:mrow><m:mo>(</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>l</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>∧</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>r</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>)</m:mo></m:mrow>
+                </m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo>
+                  <m:mrow><m:mo>(</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>l</m:mi>
+                        <m:mn>1</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>∧</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>r</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>)</m:mo></m:mrow>
+                </m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo>
+                  <m:mrow><m:mo>(</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>l</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>∧</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>r</m:mi>
+                        <m:mn>1</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>)</m:mo></m:mrow>
+                </m:mrow><m:mo>)</m:mo></m:mrow>
+            </m:mrow></m:math>
+          
+        </item>
+<item>
+          
+            <m:math><m:mrow><m:mo>◇</m:mo>
+              <m:mrow><m:mo>(</m:mo><m:ci>
+                  <m:msub>
+                    <m:mi>l</m:mi>
+                    <m:mi>i</m:mi>
+                  </m:msub>
+                </m:ci><m:mo>∧</m:mo><m:ci>
+                  <m:msub>
+                    <m:mi>r</m:mi>
+                    <m:mi>i</m:mi>
+                  </m:msub>
+                </m:ci><m:mo>)</m:mo></m:mrow>
+            </m:mrow></m:math>
+          
+        </item>
+<item>
+          
+            <m:math><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>□</m:mo>
+                <m:mrow><m:mo>◇</m:mo>
+                  <m:mrow><m:mo>(</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>l</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>∧</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>r</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>)</m:mo></m:mrow>
+                </m:mrow>
+              </m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>□</m:mo>
+                <m:mrow><m:mo>◇</m:mo>
+                  <m:mrow><m:mo>(</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>l</m:mi>
+                        <m:mn>1</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>∧</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>r</m:mi>
+                        <m:mn>1</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>)</m:mo></m:mrow>
+                </m:mrow>
+              </m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>□</m:mo>
+                <m:mrow><m:mo>◇</m:mo>
+                  <m:mrow><m:mo>(</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>l</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>∧</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>r</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>)</m:mo></m:mrow>
+                </m:mrow>
+              </m:mrow><m:mo>)</m:mo></m:mrow></m:math>
+          
+        </item>
+<item>
+          
+            Here are two solutions.
+          
+
+          <list id="list10">
+            <item>
+              <m:math><m:mrow><m:mo>□</m:mo>
+                <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo>
+                    <m:mrow><m:mo>(</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>l</m:mi>
+                          <m:mn>0</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>∧</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>l</m:mi>
+                          <m:mn>1</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>∧</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>l</m:mi>
+                          <m:mn>2</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>)</m:mo></m:mrow>
+                  </m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo>
+                    <m:mrow><m:mo>(</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>r</m:mi>
+                          <m:mn>0</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>∧</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>r</m:mi>
+                          <m:mn>1</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>∧</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>r</m:mi>
+                          <m:mn>2</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>)</m:mo></m:mrow>
+                  </m:mrow><m:mo>)</m:mo></m:mrow>
+              </m:mrow></m:math>
+            </item>
+
+            <item>
+              <m:math><m:mrow><m:mo>□</m:mo>
+                <m:mrow><m:mo>◇</m:mo>
+                  <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>l</m:mi>
+                          <m:mn>0</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>∧</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>r</m:mi>
+                          <m:mn>0</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>)</m:mo></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>(</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>l</m:mi>
+                          <m:mn>1</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>∧</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>r</m:mi>
+                          <m:mn>1</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>)</m:mo></m:mrow><m:mo>∨</m:mo><m:mrow><m:mo>(</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>l</m:mi>
+                          <m:mn>2</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>∧</m:mo><m:ci>
+                        <m:msub>
+                          <m:mi>r</m:mi>
+                          <m:mn>2</m:mn>
+                        </m:msub>
+                      </m:ci><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow>
+                </m:mrow>
+              </m:mrow></m:math>
+            </item>
+          </list>
+        </item>
+<item>
+          
+            This simply says that it never gets stuck in one
+            particular fork configuration.
+            There would be many
+            <code display="inline">if</code> statements, one per configuration,
+            and this is abbreviated.
+          ¶
+
+          
+            <m:math><m:mrow><m:mo>□</m:mo>
+              <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>l</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>∧</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>l</m:mi>
+                        <m:mn>1</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>∧</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>l</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>)</m:mo></m:mrow><m:mo>→</m:mo><m:mrow><m:mo>◇</m:mo>
+                    <m:mrow><m:mo>¬</m:mo>
+                      <m:mrow><m:mo>(</m:mo><m:ci>
+                          <m:msub>
+                            <m:mi>l</m:mi>
+                            <m:mn>0</m:mn>
+                          </m:msub>
+                        </m:ci><m:mo>∧</m:mo><m:ci>
+                          <m:msub>
+                            <m:mi>l</m:mi>
+                            <m:mn>1</m:mn>
+                          </m:msub>
+                        </m:ci><m:mo>∧</m:mo><m:ci>
+                          <m:msub>
+                            <m:mi>l</m:mi>
+                            <m:mn>2</m:mn>
+                          </m:msub>
+                        </m:ci><m:mo>)</m:mo></m:mrow>
+                    </m:mrow>
+                  </m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo>
+                      <m:ci>
+                        <m:msub>
+                          <m:mi>l</m:mi>
+                          <m:mn>0</m:mn>
+                        </m:msub>
+                      </m:ci>
+                    </m:mrow><m:mo>∧</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>l</m:mi>
+                        <m:mn>1</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>∧</m:mo><m:ci>
+                      <m:msub>
+                        <m:mi>l</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msub>
+                    </m:ci><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo>
+                      <m:ci>
+                        <m:msub>
+                          <m:mi>r</m:mi>
+                          <m:mn>2</m:mn>
+                        </m:msub>
+                      </m:ci>
+                    </m:mrow><m:mo>)</m:mo></m:mrow><m:mo>→</m:mo><m:mrow><m:mo>◇</m:mo>
+                    <m:mrow><m:mo>¬</m:mo>
+                      <m:mrow><m:mo>(</m:mo><m:mrow><m:mo>¬</m:mo>
+                          <m:ci>
+                            <m:msub>
+                              <m:mi>l</m:mi>
+                              <m:mn>0</m:mn>
+                            </m:msub>
+                          </m:ci>
+                        </m:mrow><m:mo>∧</m:mo><m:ci>
+                          <m:msub>
+                            <m:mi>l</m:mi>
+                            <m:mn>1</m:mn>
+                          </m:msub>
+                        </m:ci><m:mo>∧</m:mo><m:ci>
+                          <m:msub>
+                            <m:mi>l</m:mi>
+                            <m:mn>2</m:mn>
+                          </m:msub>
+                        </m:ci><m:mo>∧</m:mo><m:mrow><m:mo>¬</m:mo>
+                          <m:ci>
+                            <m:msub>
+                              <m:mi>r</m:mi>
+                              <m:mn>2</m:mn>
+                            </m:msub>
+                          </m:ci>
+                        </m:mrow><m:mo>)</m:mo></m:mrow>
+                    </m:mrow>
+                  </m:mrow><m:mo>)</m:mo></m:mrow><m:mo>∧</m:mo><m:mtext>…</m:mtext><m:mo>)</m:mo></m:mrow>
+            </m:mrow></m:math>
+          
+        </item>
+<item>
+          
+            There are many possibilities.  One is where
+            philosopher 0 repeatedly eats, grabbing the forks so
+            quickly that neither other philosopher has a chance to
+            grab one that is shared with him.
+          
+        </item>
+</list>
+</solution>
+</exercise>
+
+
+    <exercise id="verify-3state-crit">
+      <problem id="idp9056160">
+	<para id="para5">
+          They following algorithm is an attempt to implement
+          mutual exclusion for two processes.
+	  Here, each process is willing to defer to the other.
+	  (It also introduces Promela's <code display="inline">goto</code>, which lets
+           you branch to a label; this is an alternate way
+           of implementing loops and other control flow.)
+        </para>
+
+        <para id="para6">
+          Verify whether the algorithm is correct or not.
+          <list id="list11">
+            <item>
+              Verify using SPIN's built-in checks, without using
+              temporal logic.
+            </item>
+            <item>
+              Verify using temporal logic.
+            </item>
+            <item>
+              If it is incorrect, find a
+	      shortest possible trace when it fails.
+            </item>
+          </list>
+	</para>
+
+	<code display="block" id="idp9303392">
+ 1  int x, y, z;
+ 2
+ 3  active[2] proctype user()
+ 4  {
+ 5    int me = _pid+1;                            /* me is 1 or 2. */
+ 6
+ 7   L1:
+ 8    x = me;
+ 9    if
+10    :: (y != 0 &amp;&amp; y != me) -&gt; goto L1   /* Try again. */
+11    :: (y == 0 || y == me)                      /* Continue...  */
+12    fi;
+13
+14    z = me;
+15    if
+16    :: (x != me) -&gt; goto L1                     /* Try again. */
+17    :: (x == me)                                /* Continue... */
+18    fi;
+19
+20    y = me;
+21    if
+22    :: (z != me) -&gt; goto L1                     /* Try again. */
+23    :: (z == me)                                /* Continue... */
+24    fi;
+25
+26    /* Entering critical section. */
+27    /* ... */
+28
+29    /* Leaving critical section. */
+30  }
+	</code>
+      </problem>
+
+      <solution id="idp8899264">
+        <para id="para7">
+          As usual, we must check that no more than one process
+          is in the critical section at a time.  We can
+          our usual code
+          <code display="block" id="idm1692640">
+  in_crit++;
+  assert(in_crit == 1);
+  in_crit--;
+          </code>
+          and declaring <code display="inline">in_crit</code> global.
+          This code passes verification, <emphasis>but</emphasis>
+          warns us that this code isn't necessarily even executed!
+        </para>
+
+        <para id="para8">
+          For a critical section protocol to be valid, it must
+          also guarantee that each process eventually enters
+          the critical section.
+          Since the <code display="inline">goto</code>s create a control flow loop,
+          we can check this by looking for non-progress cycles,
+          labeling the critical section as progress.
+        </para>
+
+        <figure id="figure1">
+          <media id="idm1136384" alt=""><image src="../../media/mutex_failed_trace.png" mime-type="image/png"/></media>
+
+          <caption>
+            The shortest counter-example trace.
+            For brevity, the local values of <code display="inline">me</code>
+            are not shown, since they cannot vary.
+          </caption>
+        </figure>
+
+        <para id="para9">
+          Using temporal logic, we can create a formula that describe
+          our desired behavior:
+          ``Eventually, each process gets to the critical section,
+            but not both at the same time.''
+          One such formula is
+          <m:math><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>◇</m:mo> <m:ci>p</m:ci> </m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>◇</m:mo> <m:ci>q</m:ci> </m:mrow><m:mo>∧</m:mo><m:mrow><m:mo>□</m:mo> <m:mrow><m:mo>¬</m:mo> <m:mrow><m:mo>(</m:mo><m:ci>p</m:ci><m:mo>∧</m:mo><m:ci>q</m:ci><m:mo>)</m:mo></m:mrow> </m:mrow> </m:mrow><m:mo>)</m:mo></m:mrow></m:math>
+          where we define
+          <code display="block" id="idp7613184">
+#define p (user[0]@crit)
+#define q (user[1]@crit)
+          </code>
+          and define the label <code display="inline">crit</code> in the critical section.
+        </para>
+
+        <para id="para10">
+          This is a Promela version of an algorithm once recommended
+          by a major computer manufacturer.
+          As you can see, like many other mutual exclusion algorithms
+          that have been proposed, it is flawed.
+        </para>
+      </solution>
+    </exercise>
+
+
+    <exercise id="exercise5">
+      <problem id="idp8360256">
+        <para id="para11">
+          The following is pseudocode for an attempt to implement
+          critical sections for <code display="inline">n</code> processes.
+          It is based on the idea that processes take numbers,
+          and the one with the lowest number proceeds next.
+          This algorithm has one small flaw.
+          Your task is to find and fix the flaw.
+          In particular, show the following steps of this process.
+        </para>
+
+        <list id="list12" list-type="enumerated">
+          <item>
+            Implement this algorithm in Promela, and show the resulting code.
+            Include any code added for verification
+            purposes, although that is counts towards the next problem's score.
+          </item>
+          <item>
+            Show the use(s) of SPIN to verify that there is a flaw and
+            to determine what the flaw is.  Briefly describe the flaw.
+          </item>
+          <item>
+            Fix the flaw in the code, and show either the fix or the resulting
+            code.  Again, include any code added for the next problem's
+            verification.
+          </item>  
+          <item>
+            Show the use(s) of SPIN to verify your final implementation.
+          </item>
+        </list>
+
+       <para id="para12">
+         <emphasis>Hints:</emphasis>
+         First, do not radically change the algorithm.
+         There is a straightforward solution that only changes/adds
+         a line or two.
+         Second, do not overly serialize the code.
+         Since the entry protocol's <code display="inline">for</code>
+         loop is already serialized, this really means that each
+         each process should be able to calculate
+         <code display="inline">max</code> concurrently.
+       </para>
+
+       <list id="list13">
+         <item>
+           
+             Shared variable declarations.
+           
+
+           <code display="block" id="idp5979504">
+/* Is Pi choosing a number? */
+boolean       choosing[n];
+
+/* Pi's number, or 0 if Pi has none. */
+unsigned int  number[n];
+           </code>
+         </item>
+
+         <item>
+           
+             Global initialization.
+             Occurs once, before any process attempts to enter its
+             critical section.
+           
+
+           <code display="block" id="idp277808">
+/* No process has a number. */
+for all j ∈ {0,…,n-1}
+   number[j] = 0;
+           </code>
+         </item>
+
+         <item>
+           
+             Critical section entry protocol, for process
+             <code display="inline">i</code>.
+             <foreign>I.e.</foreign>, each process has the following
+             code immediately before its critical section.
+           ¶
+
+           <code display="block" id="idp9125920">
+/* Choose Pi's number. */
+choosing[i] = true;
+number[i]   = max(number[0],number[1],…,number[n-1]) + 1;
+choosing[i] = false;
+
+/* For all other processes, … */
+for all j ∈ {0,…,i-1, i+1,…,n-1} in some serial order
+    /* Wait if the other process is currently choosing. */
+    while (choosing[j]) /* nothing */ ;
+
+    /* Wait if the other process has a number and comes ahead of us. */
+    if ((number[j] &gt; 0) &amp;&amp;
+        (number[j] &lt; number[i]))
+       while (number[j] &gt; 0) /* nothing */ ;
+           </code>
+
+           
+             Note that, because of the <code display="inline">if</code>'s test,
+             it is equivalent to allow <code display="inline">j</code> to get
+             the value <code display="inline">i</code> in this loop, as well.
+             Although less intuitive, that simplifies the loop.
+           
+         </item>
+
+         <item>
+           
+             Critical section exit protocol, for process
+             <code display="inline">i</code>.
+             <foreign>I.e.</foreign>, each process has the following
+             code immediately after its critical section.
+           
+
+           <code display="block" id="idp12650304">
+/* Clear Pi's number. */
+number[i] = 0;
+           </code>
+         </item>
+       </list>
+     </problem>
+
+     <solution id="idp9541296">
+       <para id="para13">
+         The problem with the given code is that the concurrent
+         <code display="inline">max</code> computations
+         does not necessarily result in each element of
+         <code display="inline">number[]</code> being unique.
+         Uniqueness is assumed by the following conditional to
+         prioritize the processes:
+       </para>
+       <code display="block" id="idm1408544">
+    if ((number[j] &gt; 0) &amp;&amp;
+        (number[j] &lt; number[i]))
+       </code>
+
+       <para id="para14">
+         One of the hints precludes changing the
+         <code display="inline">max</code> calculation to produce
+         uniqueness.  So, we need a way to prioritize processes when
+         they receive the same number.  This is most easily accomplished
+         by using their process IDs:
+       </para>
+       <code display="block" id="idp6977632">
+    if ((number[j] &gt; 0) &amp;&amp;
+        ((number[j] &lt; number[i]) ||
+         ((number[j] == number[i]) &amp;&amp; j&lt;i)))
+       </code>
+       <para id="para15">
+         Of course, <code display="inline">…j&gt;i…</code>
+         is also fine.
+       </para>
+
+     </solution>
+   </exercise>
+
+
+  </content>
+</document>
